@@ -1,0 +1,7 @@
+beir_datasets/
+data/
+models/
+.python-version
+__pycache__/
+.env
+dist/

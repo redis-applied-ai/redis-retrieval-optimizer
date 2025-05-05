@@ -1,0 +1,41 @@
+# path to data files for easy read
+corpus: "data/nfcorpus_corpus.json"
+queries: "data/nfcorpus_queries.json"
+qrels: "data/nfcorpus_qrels.json"
+
+index_settings:
+  name: "optimize"
+  vector_field_name: "vector" # name of the vector field to search on
+  text_field_name: "text" # name of the text field for lexical search
+  from_existing: false
+  vector_dim: 384 # should match first embedding model or from_existing
+  additional_fields:
+      - name: "title"
+        type: "text"
+
+# section for bayesian optimization
+optimization_settings:
+  # defines weight of each metric in optimization function
+  metric_weights:
+    f1_at_k: 1
+    total_indexing_time: 1
+  algorithms: ["hnsw"] # indexing algorithm to be included in the study
+  vector_data_types: ["float16", "float32"] # data types to be included in the study
+  distance_metrics: ["cosine"] # distance metrics to be included in the study
+  n_trials: 10 # total number of trials to run
+  n_jobs: 1
+  ret_k: [1, 10] # potential range of value to be sampled during study
+  ef_runtime: [10, 20, 30, 50] # potential values for ef_runtime to take
+  ef_construction: [100, 150, 200, 250, 300] # potential values for ef_construction to take
+  m: [8, 16, 64] # potential values for m to take
+
+# potential values for search method
+search_methods: ["vector", "hybrid"]
+
+# potential values for embedding models
+embedding_models:
+  - type: "hf"
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    dim: 384
+    embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
+    dtype: "float32"
