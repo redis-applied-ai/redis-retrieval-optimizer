@@ -4,7 +4,6 @@ import time
 from typing import List
 
 import yaml
-from pydantic import TypeAdapter
 from redisvl.index import SearchIndex
 from redisvl.utils.vectorize.base import BaseVectorizer, Vectorizers
 from redisvl.utils.vectorize.text.azureopenai import AzureOpenAITextVectorizer

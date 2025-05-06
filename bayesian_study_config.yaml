@@ -12,9 +12,9 @@ metric_weights:
 algorithms: ["flat"]
 distance_metrics: ["cosine"]
 vector_data_types: ["float32"]
-search_methods: ["bm25"]
+search_methods: ["bm25", "vector", "lin_combo"]
 # constraints for the optimization
-n_trials: 1
+n_trials: 3
 n_jobs: 1
 ret_k: [6, 6] # potential range of value to be sampled during study
 ef_runtime: [0] # [10, 20, 30, 50]
@@ -25,7 +25,7 @@ embedding_models: # embedding cache would be awesome here.
   - type: "hf"
     model: "sentence-transformers/all-MiniLM-L6-v2"
     dim: 384
-    embedding_cache_name: "vec-cache"
+    embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
     embedding_cache_redis_url: "redis://localhost:6379"
   # - type: "hf"
   #   model: "intfloat/e5-large-v2"

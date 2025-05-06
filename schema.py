@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import uuid4
 
 from pydantic import BaseModel
@@ -10,12 +11,15 @@ class DataSettings(BaseModel):
 
 
 class IndexSettings(BaseModel):
+    name: str = "ret-opt"
+    from_existing: bool = False
     algorithm: str
     distance_metric: str
     vector_data_type: str
     ef_construction: int = 0
     ef_runtime: int = 0
     m: int = 0
+    # add additional fields
 
 
 class LabeledItem(BaseModel):
@@ -56,6 +60,31 @@ class StudyConfig(BaseModel):
     corpus: str
     qrels: str
     queries: str
+    embedding_models: list[EmbeddingModel]
+    n_trials: int
+    n_jobs: int
+    metric_weights: MetricWeights = MetricWeights()
+    search_methods: list[str]
+    ret_k: tuple[int, int] = [1, 10]  # type: ignore # pydantic vs mypy
+    ef_runtime: list = [10, 50]
+    ef_construction: list = [100, 300]
+    m: list = [8, 64]
+
+
+class GridStudyConfig(BaseModel):
+    study_id: str = str(uuid4())
+
+    # data
+    corpus: str = ""
+    qrels: str
+    queries: str
+
+    # index settings
+    index_settings: IndexSettings
+    algorithm: str
+    vector_data_types: list[str]
+    distance_metrics: list[str]
+
     embedding_models: list[EmbeddingModel]
     n_trials: int
     n_jobs: int

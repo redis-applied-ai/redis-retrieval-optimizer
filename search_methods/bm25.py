@@ -252,7 +252,7 @@ def gather_bm25_results(queries, index, emb_model):
             res = index.query(ft_query)
             score_dict = make_score_dict(res)
         except Exception as e:
-            print(f"failed for {key}, {text_query}")
+            print(f"failed for {key}, {text_query}: error: {e}")
             score_dict = {}
         redis_res_bm25[key] = score_dict
 

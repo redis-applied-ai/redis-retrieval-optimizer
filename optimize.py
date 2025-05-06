@@ -82,17 +82,17 @@ def update_metric_row(trial_settings: TrialSettings, trial_metrics: dict):
     # METRICS["retriever"].append(str(eval_obj.retriever.__name__))
 
 
-def get_last_index_settings(redis_url):
+def get_last_index_settings(redis_url: str):
     client = Redis.from_url(redis_url)
     return client.json().get("ret-opt:last_schema")
 
 
-def set_last_index_settings(redis_url, index_settings):
+def set_last_index_settings(redis_url: str, index_settings: dict):
     client = Redis.from_url(redis_url)
     client.json().set("ret-opt:last_schema", Path.root_path(), index_settings)
 
 
-def check_recreate_schema(index_settings, last_index_settings):
+def check_recreate_schema(index_settings: dict, last_index_settings: dict):
     if not last_index_settings:
         return True
     if last_index_settings and index_settings != last_index_settings:
@@ -237,6 +237,6 @@ def run_study_cli():
 
 if __name__ == "__main__":
     time_start = time.time()
-    study_config = utils.load_study_config("study_config.yaml")
+    study_config = utils.load_study_config("bayesian_study_config.yaml")
     run_study(study_config, save_pandas=True)
     print(f"Total time taken: {round((time.time() - time_start) / 60, 2)} minutes")
