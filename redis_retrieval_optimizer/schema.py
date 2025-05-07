@@ -4,6 +4,11 @@ from uuid import uuid4
 from pydantic import BaseModel
 
 
+class AdditionalField(BaseModel):
+    name: str
+    type: str
+
+
 class DataSettings(BaseModel):
     corpus: str
     queries: str
@@ -12,14 +17,19 @@ class DataSettings(BaseModel):
 
 class IndexSettings(BaseModel):
     name: str = "ret-opt"
+    prefix: str = "ret-opt"
+    id_field_name: str = "_id"
+    text_field_name: str = "text"
+    vector_field_name: str = "vector"
     from_existing: bool = False
-    algorithm: str
-    distance_metric: str
-    vector_data_type: str
+    vector_dim: int
+    algorithm: str = "flat"
+    distance_metric: str = "cosine"
+    vector_data_type: str = "float32"
     ef_construction: int = 0
     ef_runtime: int = 0
     m: int = 0
-    # add additional fields
+    additional_fields: list[AdditionalField] = []
 
 
 class LabeledItem(BaseModel):
@@ -33,7 +43,7 @@ class EmbeddingModel(BaseModel):
     model: str
     dim: int
     embedding_cache_name: str = ""
-    embedding_cache_redis_url: str = "redis://localhost:6379/0"
+    # redis_url should be set in the env
 
 
 class MetricWeights(BaseModel):
@@ -44,7 +54,7 @@ class MetricWeights(BaseModel):
 
 class TrialSettings(BaseModel):
     trial_id: str = str(uuid4())
-    index: IndexSettings
+    index_settings: IndexSettings
     embedding: EmbeddingModel
     data: DataSettings
     ret_k: int = 6
@@ -73,27 +83,17 @@ class StudyConfig(BaseModel):
 
 class GridStudyConfig(BaseModel):
     study_id: str = str(uuid4())
+    # index settings
+    index_settings: IndexSettings
 
     # data
     corpus: str = ""
     qrels: str
     queries: str
 
-    # index settings
-    index_settings: IndexSettings
-    algorithm: str
-    vector_data_types: list[str]
-    distance_metrics: list[str]
-
     embedding_models: list[EmbeddingModel]
-    n_trials: int
-    n_jobs: int
-    metric_weights: MetricWeights = MetricWeights()
     search_methods: list[str]
-    ret_k: tuple[int, int] = [1, 10]  # type: ignore # pydantic vs mypy
-    ef_runtime: list = [10, 50]
-    ef_construction: list = [100, 300]
-    m: list = [8, 64]
+    ret_k: int = 6
 
 
 def get_trial_settings(trial, study_config, custom_retrievers=None):
@@ -154,7 +154,6 @@ def get_trial_settings(trial, study_config, custom_retrievers=None):
         dim=model_info["dim"],
         type=model_info["type"],
         embedding_cache_name=model_info["embedding_cache_name"],
-        embedding_cache_redis_url=model_info["embedding_cache_redis_url"],
     )
 
     data_settings = DataSettings(

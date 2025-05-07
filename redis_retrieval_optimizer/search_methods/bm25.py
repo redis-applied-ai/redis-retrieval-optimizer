@@ -1,7 +1,3 @@
-import json
-from typing import Any, Dict, List
-
-from redis.commands.search.aggregation import AggregateRequest, Desc
 from redisvl.query import FilterQuery
 from redisvl.query.filter import Text
 from redisvl.utils.token_escaper import TokenEscaper

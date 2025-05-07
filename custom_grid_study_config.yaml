@@ -1,17 +1,20 @@
 # paths to necessary data files
-corpus: "data/nfcorpus_corpus.json" # optional if from_existing
-queries: "data/nfcorpus_queries.json"
-qrels: "data/nfcorpus_qrels.json"
+corpus: "data/car_corpus.json" # optional if from_existing
+queries: "data/car_queries.json"
+qrels: "data/car_qrels.json"
 
 # vector field names
 index_settings:
-  name: "optimize"
+  name: "car"
+  prefix: "car" # prefix for index name
   vector_field_name: "vector" # name of the vector field to search on
   text_field_name: "text" # name of the text field for lexical search
   from_existing: false
   additional_fields:
-    - name: "title"
-      type: "text"
+    - name: "make"
+      type: "tag"
+    - name: "model"
+      type: "tag"
   vector_dim: 384 # should match first embedding model or from_existing
 
 # will run all search methods for each embedding model and then iterate
@@ -22,4 +25,4 @@ embedding_models: # embedding cache would be awesome here.
     dim: 384
     embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
 
-search_methods: ["bm25", "vector"]
+search_methods: ["basic_vector", "pre_filter_vector"] # must match what is passed in search_method_map

@@ -8,17 +8,24 @@ def vector_query(query: str, num_results: int, emb_model) -> VectorQuery:
         vector=vector,
         vector_field_name="vector",
         num_results=num_results,
-        return_fields=["_id", "text", "title"],
+        return_fields=["_id", "text", "title"],  # update to read from env maybe?
     )
+
+
+def make_score_dict_vec(res):
+    scores_dict = {}
+    for rec in res:
+        if "_id" in rec:
+            scores_dict[rec["_id"]] = 2 - float(rec["vector_distance"]) / 2
+        else:
+            scores_dict["no_match"] = 1
+
+    return scores_dict
 
 
 def gather_vector_results(queries, index, emb_model):
     redis_res_vector = {}
 
-    def make_score_dict_vec(res):
-        return {rec["_id"]: (2 - float(rec["vector_distance"]) / 2) for rec in res}
-
-    # TODO: should be batch query for the love of speed
     for key in queries:
         text_query = queries[key]
         vec_query = vector_query(text_query, 10, emb_model)

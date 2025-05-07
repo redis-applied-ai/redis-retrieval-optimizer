@@ -1,13 +1,7 @@
 from typing import Any, Dict, List
 
-from redis.commands.search.aggregation import AggregateRequest, Desc
-from redisvl.query import FilterQuery, VectorQuery
-from redisvl.query.filter import Text
-from redisvl.redis.utils import convert_bytes, make_dict
-from redisvl.utils.token_escaper import TokenEscaper
-
-from search_methods.bm25 import bm25_query_optional
-from search_methods.lin_combo import vector_query_filter
+from redis_retrieval_optimizer.search_methods.bm25 import bm25_query_optional
+from redis_retrieval_optimizer.search_methods.lin_combo import vector_query_filter
 
 
 def fuse_rankings_rrf(*ranked_lists, weights=None, k=60):

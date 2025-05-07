@@ -1,69 +1,15 @@
-import os
-from uuid import uuid4
+from typing import Callable
 
 import pandas as pd
 import yaml
-from dotenv import load_dotenv
-from pydantic import BaseModel
 from ranx import Qrels, Run, evaluate
 from redis import Redis
 from redis.commands.json.path import Path
 from redisvl.index import SearchIndex
 
-import eval_beir
-import search_methods
-import utils
-
-load_dotenv()
-
-
-# move to schema
-class AdditionalField(BaseModel):
-    name: str
-    type: str
-
-
-class IndexSettings(BaseModel):
-    name: str = "ret-opt"
-    from_existing: bool = False
-    algorithm: str = "flat"
-    distance_metric: str = "cosine"
-    vector_data_type: str = "float32"
-    vector_dim: int = 368
-    ef_construction: int = 0
-    ef_runtime: int = 0
-    m: int = 0
-    additional_fields: list[AdditionalField] = []
-
-
-class EmbeddingModel(BaseModel):
-    type: str
-    model: str
-    dim: int
-    embedding_cache_name: str = ""
-    embedding_cache_redis_url: str = "redis://localhost:6379/0"
-
-
-class GridStudyConfig(BaseModel):
-    study_id: str = str(uuid4())
-    # index settings
-    index_settings: IndexSettings
-
-    # data
-    corpus: str = ""
-    qrels: str
-    queries: str
-
-    vector_field_name: str = "vector"
-    text_field_name: str = "text"
-    primary_id_field_name: str = "_id"  # this is what links corpus to qrels
-
-    index_settings: IndexSettings
-
-    embedding_models: list[EmbeddingModel]
-    search_methods: list[str]
-    ret_k: int = 6
-
+import redis_retrieval_optimizer.utils as utils
+from redis_retrieval_optimizer.schema import GridStudyConfig, IndexSettings
+from redis_retrieval_optimizer.search_methods import SEARCH_METHOD_MAP
 
 # move to utils
 
@@ -95,24 +41,6 @@ def update_metric_row(
     return metrics
 
 
-def get_last_index_settings(redis_url):
-    client = Redis.from_url(redis_url)
-    return client.json().get("ret-opt:last_schema")
-
-
-def set_last_index_settings(redis_url, index_settings):
-    client = Redis.from_url(redis_url)
-    client.json().set("ret-opt:last_schema", Path.root_path(), index_settings)
-
-
-def check_recreate_schema(index_settings, last_index_settings):
-    if not last_index_settings:
-        return True
-    if last_index_settings and index_settings != last_index_settings:
-        return True
-    return False
-
-
 def persist_metrics(metrics, redis_url, study_id):
     # update_metric_row(trial_settings, trial_metrics)
     # logging.info(f"Saving metrics for study: {study_id}, {METRICS=}")
@@ -130,13 +58,12 @@ def load_grid_study_config(config_path: str) -> GridStudyConfig:
 
 def schema_from_settings(index_settings: IndexSettings, additional_schema_fields=None):
     schema = {
-        "index": {"name": "optimize", "prefix": "ret-opt"},
+        "index": {"name": index_settings.name, "prefix": index_settings.prefix},
         "fields": [
-            {"name": "_id", "type": "tag"},
-            {"name": "text", "type": "text"},
-            {"name": "title", "type": "text"},
+            {"name": index_settings.id_field_name, "type": "tag"},
+            {"name": index_settings.text_field_name, "type": "text"},
             {
-                "name": "vector",
+                "name": index_settings.vector_field_name,
                 "type": "vector",
                 "attrs": {
                     "dims": index_settings.vector_dim,
@@ -154,15 +81,15 @@ def schema_from_settings(index_settings: IndexSettings, additional_schema_fields
     # define a custom search method to do pre-filtering etc.
     if additional_schema_fields:
         for field in additional_schema_fields:
-            schema["fields"].append(field)  # type: ignore
+            schema["fields"].append({"name": field.name, "type": field.type})  # type: ignore
 
     return schema
 
 
 # TODO: generalize with other study configs
-def init_index_from_grid_settings(grid_study_config: GridStudyConfig) -> SearchIndex:
-    redis_url = os.environ.get("REDIS_URL")
-
+def init_index_from_grid_settings(
+    grid_study_config: GridStudyConfig, redis_url: str, corpus_processor: Callable
+) -> SearchIndex:
     index_settings = grid_study_config.index_settings.model_dump()
     embed_settings = grid_study_config.embedding_models[0]
     index_settings["embedding"] = embed_settings.model_dump()
@@ -187,10 +114,10 @@ def init_index_from_grid_settings(grid_study_config: GridStudyConfig) -> SearchI
             raise ValueError(
                 f"Embedding model dimension {emb_model.dims} does not match index dimension {index.schema.fields[grid_study_config.vector_field_name].attrs['dims']}"
             )
-        set_last_index_settings(redis_url, index_settings)
+        utils.set_last_index_settings(redis_url, index_settings)
     else:
-        last_index_settings = get_last_index_settings(grid_study_config.redis_url)
-        recreate = check_recreate_schema(index_settings, last_index_settings)
+        last_index_settings = utils.get_last_index_settings(redis_url)
+        recreate = utils.check_recreate_schema(index_settings, last_index_settings)
 
         schema = schema_from_settings(
             grid_study_config.index_settings,
@@ -198,28 +125,37 @@ def init_index_from_grid_settings(grid_study_config: GridStudyConfig) -> SearchI
         )
 
         index = SearchIndex.from_dict(schema, redis_url=redis_url)
+        index.create(overwrite=False, drop=False)
 
         if recreate:
-            emb_model = utils.get_embedding_model(grid_study_config.embedding_models[0])
+            emb_model = utils.get_embedding_model(
+                grid_study_config.embedding_models[0], redis_url
+            )
             print("Recreating: loading corpus from file")
             corpus = utils.load_json(grid_study_config.corpus)
             # corpus processing functions should be user defined
-            corpus_data = eval_beir.process_corpus(corpus, emb_model)
+            corpus_data = corpus_processor(corpus, emb_model)
 
             index.load(corpus_data)
 
     return index
 
 
-def run_grid_study(config_path: str):
+def run_grid_study(
+    config_path: str,
+    redis_url: str,
+    corpus_processor: Callable,
+    search_method_map=SEARCH_METHOD_MAP,
+):
     grid_study_config = load_grid_study_config(config_path)
-    redis_url = os.environ.get("REDIS_URL")
 
     # load queries and qrels
     queries = utils.load_json(grid_study_config.queries)
     qrels = Qrels(utils.load_json(grid_study_config.qrels))
 
-    index = init_index_from_grid_settings(grid_study_config)
+    index = init_index_from_grid_settings(
+        grid_study_config, redis_url, corpus_processor
+    )
 
     metrics: dict = {
         "search_method": [],
@@ -255,19 +191,19 @@ def run_grid_study(config_path: str):
                 "If using multiple embedding models assuming there is a json version of corpus available."
             )
             print("Recreating: loading corpus from file")
-            emb_model = utils.get_embedding_model(embedding_model)
+            emb_model = utils.get_embedding_model(embedding_model, redis_url)
             corpus = utils.load_json(grid_study_config.corpus)
             # corpus processing functions should be user defined
-            corpus_data = eval_beir.process_corpus(corpus, emb_model)
+            corpus_data = corpus_processor(corpus, emb_model)
             index.load(corpus_data)
 
         # check if matches with last index settings
-        emb_model = utils.get_embedding_model(embedding_model)
+        emb_model = utils.get_embedding_model(embedding_model, redis_url)
 
         for search_method in grid_study_config.search_methods:
             print(f"Running search method: {search_method}")
             # get search method to try
-            search_fn = search_methods.SEARCH_METHOD_MAP[search_method]
+            search_fn = search_method_map[search_method]
             trial_results = search_fn(queries, index, emb_model)
 
             run = Run(trial_results)
@@ -299,8 +235,3 @@ def run_grid_study(config_path: str):
             )
 
     return metrics
-
-
-if __name__ == "__main__":
-    config_path = "grid_study_config.yaml"
-    metrics = run_grid_study(config_path)

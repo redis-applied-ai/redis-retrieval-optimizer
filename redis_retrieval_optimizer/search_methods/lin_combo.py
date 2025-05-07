@@ -3,7 +3,7 @@ from redisvl.query import VectorQuery
 from redisvl.query.filter import Text
 from redisvl.redis.utils import convert_bytes, make_dict
 
-from search_methods.bm25 import tokenize_and_escape_query
+from redis_retrieval_optimizer.search_methods.bm25 import tokenize_and_escape_query
 
 
 def vector_query_filter(

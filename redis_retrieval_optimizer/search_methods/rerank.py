@@ -2,8 +2,8 @@ from typing import Any, Dict, List
 
 from redisvl.utils.rerank import HFCrossEncoderReranker
 
-from search_methods.bm25 import bm25_query_optional
-from search_methods.lin_combo import vector_query_filter
+from redis_retrieval_optimizer.search_methods.bm25 import bm25_query_optional
+from redis_retrieval_optimizer.search_methods.lin_combo import vector_query_filter
 
 # Load the ms marco MiniLM cross encoder model from huggingface
 reranker = HFCrossEncoderReranker("cross-encoder/ms-marco-MiniLM-L-6-v2")

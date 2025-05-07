@@ -1,0 +1,49 @@
+[project]
+name = "redis-retrieval-optimizer"
+version = "0.1.0"
+description = "A tool to help optimize information retrieval with Redis."
+authors = [
+    {name = "Robert Shelton ",email = "robert.shelton@redis.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.11, <3.14"
+dependencies = [
+    "redisvl (>=0.6.0,<0.7.0)",
+    "optuna (>=4.3.0,<5.0.0)",
+    "numpy (>=1,<2)",
+    "pandas (>=2.2.3,<3.0.0)",
+    "sentence-transformers (>=4.1.0,<5.0.0)",
+    "redis (>=5.0,<6.0)",
+]
+
+[tool.poetry]
+
+[tool.poetry.group.dev.dependencies]
+mypy = "1.9.0"
+black = ">=20.8b1"
+pylint = "3.1.0"
+isort = ">=5.6.4"
+pytest-cov = "5.0.0"
+pytest-asyncio = "^0.23.7"
+pytest = "^8.2.2"
+types-redis = "*"
+types-pyyaml = "*"
+types-tabulate = "*"
+anyio = {extras = ["trio"], version = "^4.4.0"}
+ipykernel = "^6.29.5"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.extras]
+openai = ["openai"]
+sentence-transformers = ["sentence-transformers", "scipy"]
+vertexai = ["google_cloud_aiplatform", "protobuf"]
+cohere = ["cohere"]
+mistralai = ["mistralai"]
+voyageai = ["voyageai"]
+ranx = ["ranx"]
+bedrock = ["boto3"]
+nltk = ["nltk"]

@@ -7,18 +7,22 @@ from functools import partial
 import numpy as np
 import optuna
 import pandas as pd
+import search_methods
 import yaml
 from beir.retrieval.evaluation import EvaluateRetrieval
 from ranx import Qrels, Run, evaluate
 from redis import Redis
 from redis.commands.json.path import Path
 
-import eval_beir
-import search_methods
+import redis_retrieval_optimizer.corpus_processors.eval_beir as eval_beir
 
 # import search_methods.bm25
-import utils
-from schema import StudyConfig, TrialSettings, get_trial_settings
+import redis_retrieval_optimizer.utils as utils
+from redis_retrieval_optimizer.schema import (
+    StudyConfig,
+    TrialSettings,
+    get_trial_settings,
+)
 
 SEARCH_METHOD_MAP = {
     "bm25": search_methods.bm25.gather_bm25_results,
@@ -82,24 +86,6 @@ def update_metric_row(trial_settings: TrialSettings, trial_metrics: dict):
     # METRICS["retriever"].append(str(eval_obj.retriever.__name__))
 
 
-def get_last_index_settings(redis_url: str):
-    client = Redis.from_url(redis_url)
-    return client.json().get("ret-opt:last_schema")
-
-
-def set_last_index_settings(redis_url: str, index_settings: dict):
-    client = Redis.from_url(redis_url)
-    client.json().set("ret-opt:last_schema", Path.root_path(), index_settings)
-
-
-def check_recreate_schema(index_settings: dict, last_index_settings: dict):
-    if not last_index_settings:
-        return True
-    if last_index_settings and index_settings != last_index_settings:
-        return True
-    return False
-
-
 def persist_metrics(
     redis_url, trial_settings: TrialSettings, trial_metrics: dict, study_id
 ):
@@ -130,8 +116,8 @@ def objective(trial, study_config, custom_retrievers):
 
     index_settings = trial_settings.index.model_dump()
     index_settings["embedding"] = trial_settings.embedding.model_dump()
-    last_index_settings = get_last_index_settings(study_config.redis_url)
-    recreate = check_recreate_schema(index_settings, last_index_settings)
+    last_index_settings = utils.get_last_index_settings(study_config.redis_url)
+    recreate = utils.check_recreate_schema(index_settings, last_index_settings)
 
     schema_dict = utils.schema_from_settings(trial_settings)
     trial_index = utils.index_from_schema(schema_dict, study_config.redis_url, recreate)
@@ -152,7 +138,7 @@ def objective(trial, study_config, custom_retrievers):
         logging.info(f"Indexing progress: {trial_index.info()['percent_indexed']}")
 
     # save config since it loaded
-    set_last_index_settings(study_config.redis_url, index_settings)
+    utils.set_last_index_settings(study_config.redis_url, index_settings)
 
     # capture index metrics
     total_indexing_time = round(
