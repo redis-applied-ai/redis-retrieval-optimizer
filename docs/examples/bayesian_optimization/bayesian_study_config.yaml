@@ -1,0 +1,36 @@
+# path to data files for easy read
+corpus: "data/nfcorpus_corpus.json"
+queries: "data/nfcorpus_queries.json"
+qrels: "data/nfcorpus_qrels.json"
+# metrics to be used in objective function
+metric_weights:
+  ndcg: 1
+  recall: 1
+  f1: 1
+  # embedding_latency: 1
+  total_indexing_time: 1
+algorithms: ["flat"]
+distance_metrics: ["cosine"]
+vector_data_types: ["float32"]
+search_methods: ["bm25", "vector", "lin_combo"]
+# constraints for the optimization
+n_trials: 3
+n_jobs: 1
+ret_k: [6, 6] # potential range of value to be sampled during study
+ef_runtime: [0] # [10, 20, 30, 50]
+ef_construction: [0] # [100, 150, 200, 250, 300]
+m: [0] # [8, 16, 64]
+# embedding models to be used
+embedding_models: # embedding cache would be awesome here.
+  - type: "hf"
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    dim: 384
+    embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
+  # - type: "hf"
+  #   model: "intfloat/e5-large-v2"
+  #   dim: 1024
+  #   embedding_cache_name: "ret-opt-vec-cache"
+  # - type: "openai"
+  #   model: "text-embedding-3-small"
+  #   dim: 1536
+  #   embedding_cache_name: "ret-opt-vec-cache"
