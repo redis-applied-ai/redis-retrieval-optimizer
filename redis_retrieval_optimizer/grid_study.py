@@ -1,19 +1,17 @@
 from typing import Callable
 
 import pandas as pd
-import yaml
-from ranx import Qrels, Run, evaluate
+from ranx import Qrels, Run
 from redis import Redis
 from redis.commands.json.path import Path
 from redisvl.index import SearchIndex
 
 import redis_retrieval_optimizer.utils as utils
-from redis_retrieval_optimizer.schema import GridStudyConfig, IndexSettings
+from redis_retrieval_optimizer.schema import GridStudyConfig
 from redis_retrieval_optimizer.search_methods import SEARCH_METHOD_MAP
 
-# move to utils
 
-
+# TODO: generalize metric update functions
 def update_metric_row(
     metrics, grid_study_config, search_method, embedding_settings, trial_metrics: dict
 ):
@@ -49,43 +47,6 @@ def persist_metrics(metrics, redis_url, study_id):
     client.json().set(f"study:{study_id}", Path.root_path(), metrics)
 
 
-def load_grid_study_config(config_path: str) -> GridStudyConfig:
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
-
-    return GridStudyConfig(**config)
-
-
-def schema_from_settings(index_settings: IndexSettings, additional_schema_fields=None):
-    schema = {
-        "index": {"name": index_settings.name, "prefix": index_settings.prefix},
-        "fields": [
-            {"name": index_settings.id_field_name, "type": "tag"},
-            {"name": index_settings.text_field_name, "type": "text"},
-            {
-                "name": index_settings.vector_field_name,
-                "type": "vector",
-                "attrs": {
-                    "dims": index_settings.vector_dim,
-                    "distance_metric": index_settings.distance_metric,
-                    "algorithm": index_settings.algorithm,
-                    "datatype": index_settings.vector_data_type,
-                    "ef_construction": index_settings.ef_construction,
-                    "ef_runtime": index_settings.ef_runtime,
-                    "m": index_settings.m,
-                },
-            },
-        ],
-    }
-
-    # define a custom search method to do pre-filtering etc.
-    if additional_schema_fields:
-        for field in additional_schema_fields:
-            schema["fields"].append({"name": field.name, "type": field.type})  # type: ignore
-
-    return schema
-
-
 # TODO: generalize with other study configs
 def init_index_from_grid_settings(
     grid_study_config: GridStudyConfig, redis_url: str, corpus_processor: Callable
@@ -119,9 +80,8 @@ def init_index_from_grid_settings(
         last_index_settings = utils.get_last_index_settings(redis_url)
         recreate = utils.check_recreate_schema(index_settings, last_index_settings)
 
-        schema = schema_from_settings(
+        schema = utils.schema_from_settings(
             grid_study_config.index_settings,
-            additional_schema_fields=grid_study_config.index_settings.additional_fields,
         )
 
         index = SearchIndex.from_dict(schema, redis_url=redis_url)
@@ -147,7 +107,7 @@ def run_grid_study(
     corpus_processor: Callable,
     search_method_map=SEARCH_METHOD_MAP,
 ):
-    grid_study_config = load_grid_study_config(config_path)
+    grid_study_config = utils.load_grid_study_config(config_path)
 
     # load queries and qrels
     queries = utils.load_json(grid_study_config.queries)
@@ -208,19 +168,9 @@ def run_grid_study(
 
             run = Run(trial_results)
 
-            # TODO: generalize with bayesian optimization
-            ndcg = evaluate(qrels, run, metrics=["ndcg"])
-            recall = evaluate(qrels, run, metrics=["recall"])
-            f1 = evaluate(qrels, run, metrics=["f1"])
-            precision = evaluate(qrels, run, metrics=["precision"])
-
-            trial_metrics = {
-                "ndcg": ndcg,
-                "recall": recall,
-                "f1": f1,
-                "precision": precision,
-                "total_indexing_time": 0,
-            }
+            trial_metrics = utils.eval_trial_metrics(qrels, run)
+            # TODO: real values
+            trial_metrics["total_indexing_time"] = 0
 
             metrics = update_metric_row(
                 metrics,
@@ -229,6 +179,7 @@ def run_grid_study(
                 embedding_model,
                 trial_metrics,
             )
+
             persist_metrics(metrics, redis_url, grid_study_config.study_id)
             pd.DataFrame(metrics).to_csv(
                 f"data/{grid_study_config.study_id}_metrics.csv", index=False

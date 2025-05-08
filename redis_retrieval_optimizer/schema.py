@@ -43,6 +43,7 @@ class EmbeddingModel(BaseModel):
     model: str
     dim: int
     embedding_cache_name: str = ""
+    dtype: str = "float32"
     # redis_url should be set in the env
 
 
@@ -61,24 +62,28 @@ class TrialSettings(BaseModel):
     search_method: str = "vector"
 
 
-class StudyConfig(BaseModel):
-    study_id: str = str(uuid4())
-    redis_url: str = "redis://localhost:6379/0"
+class OptimizationSettings(BaseModel):
     algorithms: list[str]
     vector_data_types: list[str]
     distance_metrics: list[str]
-    corpus: str
-    qrels: str
-    queries: str
-    embedding_models: list[EmbeddingModel]
     n_trials: int
     n_jobs: int
     metric_weights: MetricWeights = MetricWeights()
-    search_methods: list[str]
     ret_k: tuple[int, int] = [1, 10]  # type: ignore # pydantic vs mypy
     ef_runtime: list = [10, 50]
     ef_construction: list = [100, 300]
     m: list = [8, 64]
+
+
+class BayesStudyConfig(BaseModel):
+    study_id: str = str(uuid4())
+    corpus: str
+    qrels: str
+    queries: str
+    index_settings: IndexSettings
+    optimization_settings: OptimizationSettings
+    embedding_models: list[EmbeddingModel]
+    search_methods: list[str]
 
 
 class GridStudyConfig(BaseModel):
@@ -96,7 +101,7 @@ class GridStudyConfig(BaseModel):
     ret_k: int = 6
 
 
-def get_trial_settings(trial, study_config, custom_retrievers=None):
+def get_trial_settings(trial, study_config):
 
     model_info = trial.suggest_categorical(
         "model_info",
@@ -107,53 +112,41 @@ def get_trial_settings(trial, study_config, custom_retrievers=None):
         "search_method", study_config.search_methods
     )
 
-    # if custom_retrievers:
-    #     retriever_name = trial.suggest_categorical(
-    #         "retriever", list(custom_retrievers.keys())
-    #     )
-    #     obj = custom_retrievers[retriever_name]
-    #     retriever = obj["retriever"]
-    #     additional_schema_fields = custom_retrievers[retriever_name].get(
-    #         "additional_schema_fields", None
-    #     )
-    # else:
-    #     retriever = DefaultQueryRetriever
-    #     additional_schema_fields = None
-
-    # logging.info(
-    #     f"Running for Retriever: {retriever.__name__} with {additional_schema_fields=}"
-    # )
-
-    algorithm = trial.suggest_categorical("algorithm", study_config.algorithms)
-    vec_dtype = trial.suggest_categorical("var_dtype", study_config.vector_data_types)
-    dist_metric = trial.suggest_categorical(
-        "distance_metric", study_config.distance_metrics
+    study_config.index_settings.algorithm = trial.suggest_categorical(
+        "algorithm", study_config.optimization_settings.algorithms
+    )
+    study_config.index_settings.vector_data_type = trial.suggest_categorical(
+        "var_dtype", study_config.optimization_settings.vector_data_types
+    )
+    study_config.index_settings.distance_metric = trial.suggest_categorical(
+        "distance_metric", study_config.optimization_settings.distance_metrics
     )
 
-    ret_k = trial.suggest_int("ret_k", study_config.ret_k[0], study_config.ret_k[1])
-
-    index_settings = IndexSettings(
-        algorithm=algorithm,
-        distance_metric=dist_metric,
-        vector_data_type=vec_dtype,
+    ret_k = trial.suggest_int(
+        "ret_k",
+        study_config.optimization_settings.ret_k[0],
+        study_config.optimization_settings.ret_k[1],
     )
 
-    if algorithm == "hnsw":
-        ef_runtime = trial.suggest_categorical("ef_runtime", study_config.ef_runtime)
-        ef_construction = trial.suggest_categorical(
-            "ef_construction", study_config.ef_construction
+    if study_config.index_settings.algorithm == "hnsw":
+        ef_runtime = trial.suggest_categorical(
+            "ef_runtime", study_config.optimization_settings.ef_runtime
         )
-        m = trial.suggest_categorical("m", study_config.m)
+        ef_construction = trial.suggest_categorical(
+            "ef_construction", study_config.optimization_settings.ef_construction
+        )
+        m = trial.suggest_categorical("m", study_config.optimization_settings.m)
 
-        index_settings.ef_construction = ef_construction
-        index_settings.ef_runtime = ef_runtime
-        index_settings.m = m
+        study_config.index_settings.ef_construction = ef_construction
+        study_config.index_settings.ef_runtime = ef_runtime
+        study_config.index_settings.m = m
 
     embedding_settings = EmbeddingModel(
         model=model_info["model"],
         dim=model_info["dim"],
         type=model_info["type"],
         embedding_cache_name=model_info["embedding_cache_name"],
+        dtype=study_config.index_settings.vector_data_type,
     )
 
     data_settings = DataSettings(
@@ -163,7 +156,7 @@ def get_trial_settings(trial, study_config, custom_retrievers=None):
     )
 
     return TrialSettings(
-        index=index_settings,
+        index_settings=study_config.index_settings,
         embedding=embedding_settings,
         ret_k=ret_k,
         data=data_settings,

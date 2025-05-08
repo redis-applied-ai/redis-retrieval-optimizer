@@ -1,0 +1,39 @@
+# path to data files for easy read
+corpus: "data/nfcorpus_corpus.json"
+queries: "data/nfcorpus_queries.json"
+qrels: "data/nfcorpus_qrels.json"
+
+index_settings:
+  name: "optimize"
+  vector_field_name: "vector" # name of the vector field to search on
+  text_field_name: "text" # name of the text field for lexical search
+  from_existing: false
+  vector_dim: 384 # should match first embedding model or from_existing
+  additional_fields:
+      - name: "title"
+        type: "text"
+
+optimization_settings:
+  # defines the options optimization can take
+  metric_weights:
+    f1_at_k: 1
+    embedding_latency: 1
+    total_indexing_time: 1
+  algorithms: ["hnsw"]
+  vector_data_types: ["float16"]
+  distance_metrics: ["cosine"]
+  n_trials: 2
+  n_jobs: 1
+  ret_k: [1, 10] # potential range of value to be sampled during study
+  ef_runtime: [10, 20, 30, 50]
+  ef_construction: [100, 150, 200, 250, 300]
+  m: [8, 16, 64]
+
+
+search_methods: ["vector"]
+embedding_models:
+  - type: "hf"
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    dim: 384
+    embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
+    dtype: "float32"

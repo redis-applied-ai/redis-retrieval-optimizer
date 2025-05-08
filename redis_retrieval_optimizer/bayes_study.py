@@ -1,36 +1,19 @@
-import argparse
 import logging
 import time
 import warnings
 from functools import partial
+from typing import Callable
 
-import numpy as np
 import optuna
 import pandas as pd
-import search_methods
-import yaml
-from beir.retrieval.evaluation import EvaluateRetrieval
-from ranx import Qrels, Run, evaluate
+from ranx import Qrels, Run
 from redis import Redis
 from redis.commands.json.path import Path
 
-import redis_retrieval_optimizer.corpus_processors.eval_beir as eval_beir
-
 # import search_methods.bm25
 import redis_retrieval_optimizer.utils as utils
-from redis_retrieval_optimizer.schema import (
-    StudyConfig,
-    TrialSettings,
-    get_trial_settings,
-)
-
-SEARCH_METHOD_MAP = {
-    "bm25": search_methods.bm25.gather_bm25_results,
-    "rerank": search_methods.rerank.gather_rerank_results,
-    "lin_combo": search_methods.lin_combo.gather_lin_combo_results,
-    "vector": search_methods.vector.gather_vector_results,
-    "weighted_rrf": search_methods.weighted_rrf.gather_weighted_rrf,
-}
+from redis_retrieval_optimizer.schema import TrialSettings, get_trial_settings
+from redis_retrieval_optimizer.search_methods import SEARCH_METHOD_MAP
 
 warnings.filterwarnings("ignore")
 
@@ -57,22 +40,15 @@ METRICS: dict = {
 }
 
 
-def load_config(config_path: str) -> StudyConfig:
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
-
-    return StudyConfig(**config)
-
-
 def update_metric_row(trial_settings: TrialSettings, trial_metrics: dict):
     METRICS["search_method"].append(trial_settings.search_method)
     METRICS["ret_k"].append(trial_settings.ret_k)
-    METRICS["algorithm"].append(trial_settings.index.algorithm)
-    METRICS["ef_construction"].append(trial_settings.index.ef_construction)
-    METRICS["ef_runtime"].append(trial_settings.index.ef_runtime)
-    METRICS["m"].append(trial_settings.index.m)
-    METRICS["distance_metric"].append(trial_settings.index.distance_metric)
-    METRICS["vector_data_type"].append(trial_settings.index.vector_data_type)
+    METRICS["algorithm"].append(trial_settings.index_settings.algorithm)
+    METRICS["ef_construction"].append(trial_settings.index_settings.ef_construction)
+    METRICS["ef_runtime"].append(trial_settings.index_settings.ef_runtime)
+    METRICS["m"].append(trial_settings.index_settings.m)
+    METRICS["distance_metric"].append(trial_settings.index_settings.distance_metric)
+    METRICS["vector_data_type"].append(trial_settings.index_settings.vector_data_type)
     METRICS["model"].append(trial_settings.embedding.model)
     METRICS["model_dim"].append(trial_settings.embedding.dim)
     METRICS["recall@k"].append(trial_metrics["recall"])
@@ -107,27 +83,32 @@ def norm_metric(value: float):
     return 1 / (1 + value)
 
 
-def objective(trial, study_config, custom_retrievers):
+def objective(trial, study_config, redis_url, corpus_processor, search_method_map):
 
     # optimizer will select hyperparameters from available option in study_config
-    trial_settings = get_trial_settings(
-        trial, study_config, custom_retrievers=custom_retrievers
+    trial_settings = get_trial_settings(trial, study_config)
+
+    index_settings = trial_settings.index_settings.model_dump()
+    index_settings["embedding"] = trial_settings.embedding.model_dump()
+
+    last_index_settings = utils.get_last_index_settings(redis_url)
+    recreate_index, recreate_data = utils.check_recreate(
+        index_settings, last_index_settings
     )
 
-    index_settings = trial_settings.index.model_dump()
-    index_settings["embedding"] = trial_settings.embedding.model_dump()
-    last_index_settings = utils.get_last_index_settings(study_config.redis_url)
-    recreate = utils.check_recreate_schema(index_settings, last_index_settings)
+    schema_dict = utils.schema_from_settings(trial_settings.index_settings)
+    trial_index = utils.index_from_schema(schema_dict, redis_url, recreate_index)
 
-    schema_dict = utils.schema_from_settings(trial_settings)
-    trial_index = utils.index_from_schema(schema_dict, study_config.redis_url, recreate)
+    emb_model = utils.get_embedding_model(
+        trial_settings.embedding,
+        redis_url,
+        dtype=trial_settings.index_settings.vector_data_type,
+    )
 
-    emb_model = utils.get_embedding_model(trial_settings.embedding)
-
-    if recreate:
+    if recreate_data:
         print("Recreating index...")
         corpus = utils.load_json(study_config.corpus)
-        corpus_data = eval_beir.process_corpus(corpus, emb_model)
+        corpus_data = corpus_processor(corpus, emb_model)
 
         trial_index.load(corpus_data)
     else:
@@ -137,48 +118,52 @@ def objective(trial, study_config, custom_retrievers):
         time.sleep(1)
         logging.info(f"Indexing progress: {trial_index.info()['percent_indexed']}")
 
-    # save config since it loaded
-    utils.set_last_index_settings(study_config.redis_url, index_settings)
-
     # capture index metrics
     total_indexing_time = round(
         float(trial_index.info()["total_indexing_time"]) / 1000, 3
     )
     num_docs = trial_index.info()["num_docs"]
+
     logging.info(f"Data indexed {total_indexing_time=}s, {num_docs=}")
 
+    if num_docs == 0:
+        raise ValueError("No documents indexed, check corpus and index settings")
+
+    # save config since it loaded
+    index_settings["embedding"] = trial_settings.embedding.model_dump()
+    utils.set_last_index_settings(redis_url, index_settings)
+
     # get search method to try
-    search_fn = SEARCH_METHOD_MAP[trial_settings.search_method]
+    search_fn = search_method_map[trial_settings.search_method]
 
     # run search method
     queries = utils.load_json(study_config.queries)
-    trial_results = search_fn(queries, trial_index, emb_model)
-
     qrels = Qrels(utils.load_json(study_config.qrels))
+
+    trial_results = search_fn(queries, trial_index, emb_model)
+    if not trial_results:
+        raise ValueError("No results dafaq")
     run = Run(trial_results)
 
-    ndcg = evaluate(qrels, run, metrics=["ndcg"])
-    recall = evaluate(qrels, run, metrics=["recall"])
-    f1 = evaluate(qrels, run, metrics=["f1"])
-    precision = evaluate(qrels, run, metrics=["precision"])
-
-    trial_metrics = {
-        "ndcg": ndcg,
-        "recall": recall,
-        "f1": f1,
-        "precision": precision,
-        "total_indexing_time": total_indexing_time,
-    }
+    trial_metrics = utils.eval_trial_metrics(qrels, run)
+    trial_metrics["total_indexing_time"] = total_indexing_time
 
     # save results as we go in case of failure
-    persist_metrics(
-        study_config.redis_url, trial_settings, trial_metrics, study_config.study_id
+    persist_metrics(redis_url, trial_settings, trial_metrics, study_config.study_id)
+
+    return cost_fn(
+        trial_metrics, study_config.optimization_settings.metric_weights.dict()
     )
 
-    return cost_fn(trial_metrics, study_config.metric_weights.dict())
 
+def run_bayes_study(
+    config_path: str,
+    redis_url: str,
+    corpus_processor: Callable,
+    search_method_map=SEARCH_METHOD_MAP,
+):
 
-def run_study(study_config: StudyConfig, custom_retrievers=None, save_pandas=False):
+    study_config = utils.load_bayes_study_config(config_path)
 
     study = optuna.create_study(
         study_name="test",
@@ -190,13 +175,15 @@ def run_study(study_config: StudyConfig, custom_retrievers=None, save_pandas=Fal
     obj = partial(
         objective,
         study_config=study_config,
-        custom_retrievers=custom_retrievers,
+        redis_url=redis_url,
+        corpus_processor=corpus_processor,
+        search_method_map=search_method_map,
     )
 
     study.optimize(
         obj,
-        n_trials=study_config.n_trials,
-        n_jobs=study_config.n_jobs,
+        n_trials=study_config.optimization_settings.n_trials,
+        n_jobs=study_config.optimization_settings.n_jobs,
     )
 
     print(f"Completed Bayesian optimization... \n\n")
@@ -205,24 +192,6 @@ def run_study(study_config: StudyConfig, custom_retrievers=None, save_pandas=Fal
     print(f"Best Configuration: {best_trial.number}: {best_trial.params}:\n\n")
     print(f"Best Score: {best_trial.values}\n\n")
 
-    if save_pandas:
-        pd.DataFrame(METRICS).to_csv(
-            f"data/{study_config.study_id}_metrics.csv", index=False
-        )
-
-
-def run_study_cli():
-    parser = argparse.ArgumentParser(
-        description="Tune hyperparameters for Redis Vector Store given config file"
+    pd.DataFrame(METRICS).to_csv(
+        f"data/{study_config.study_id}_metrics.csv", index=False
     )
-    parser.add_argument("--config", type=str, help="Path to config file")
-    args = parser.parse_args()
-    study_config = load_config(args.config)
-    run_study(study_config)
-
-
-if __name__ == "__main__":
-    time_start = time.time()
-    study_config = utils.load_study_config("bayesian_study_config.yaml")
-    run_study(study_config, save_pandas=True)
-    print(f"Total time taken: {round((time.time() - time_start) / 60, 2)} minutes")

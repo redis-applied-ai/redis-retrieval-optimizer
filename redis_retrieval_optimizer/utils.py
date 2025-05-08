@@ -2,68 +2,62 @@ import json
 import os
 
 import yaml
+from ranx import Qrels, Run, evaluate
 from redis import Redis
 from redis.commands.json.path import Path
+from redisvl.extensions.cache.embeddings import EmbeddingsCache
 from redisvl.index import SearchIndex
 
 # from redisvl.extensions.cache.embeddings import EmbeddingsCache
-from redisvl.utils.vectorize import vectorizer_from_dict
+# from redisvl.utils.vectorize import vectorizer_from_dict TODO: update actual function in redisvl
 from redisvl.utils.vectorize.base import BaseVectorizer, Vectorizers
+from redisvl.utils.vectorize.text.azureopenai import AzureOpenAITextVectorizer
+from redisvl.utils.vectorize.text.bedrock import BedrockTextVectorizer
+from redisvl.utils.vectorize.text.cohere import CohereTextVectorizer
+from redisvl.utils.vectorize.text.custom import CustomTextVectorizer
+from redisvl.utils.vectorize.text.huggingface import HFTextVectorizer
+from redisvl.utils.vectorize.text.mistral import MistralAITextVectorizer
+from redisvl.utils.vectorize.text.openai import OpenAITextVectorizer
+from redisvl.utils.vectorize.text.vertexai import VertexAITextVectorizer
+from redisvl.utils.vectorize.text.voyageai import VoyageAITextVectorizer
 
-from redis_retrieval_optimizer.schema import EmbeddingModel, StudyConfig, TrialSettings
-
-# from redisvl.utils.vectorize.text.azureopenai import AzureOpenAITextVectorizer
-# from redisvl.utils.vectorize.text.bedrock import BedrockTextVectorizer
-# from redisvl.utils.vectorize.text.cohere import CohereTextVectorizer
-# from redisvl.utils.vectorize.text.custom import CustomTextVectorizer
-# from redisvl.utils.vectorize.text.huggingface import HFTextVectorizer
-# from redisvl.utils.vectorize.text.mistral import MistralAITextVectorizer
-# from redisvl.utils.vectorize.text.openai import OpenAITextVectorizer
-# from redisvl.utils.vectorize.text.vertexai import VertexAITextVectorizer
-# from redisvl.utils.vectorize.text.voyageai import VoyageAITextVectorizer
-
-
-# __all__ = [
-#     "BaseVectorizer",
-#     "CohereTextVectorizer",
-#     "HFTextVectorizer",
-#     "OpenAITextVectorizer",
-#     "VertexAITextVectorizer",
-#     "AzureOpenAITextVectorizer",
-#     "MistralAITextVectorizer",
-#     "CustomTextVectorizer",
-#     "BedrockTextVectorizer",
-#     "VoyageAITextVectorizer",
-# ]
+from redis_retrieval_optimizer.schema import (
+    BayesStudyConfig,
+    EmbeddingModel,
+    GridStudyConfig,
+    IndexSettings,
+)
 
 
-# def vectorizer_from_dict(
-#     vectorizer: dict,
-#     cache: dict = {},
-# ) -> BaseVectorizer:
-#     vectorizer_type = Vectorizers(vectorizer["type"])
+def vectorizer_from_dict(
+    vectorizer: dict,
+    cache: dict = {},
+) -> BaseVectorizer:
+    vectorizer_type = Vectorizers(vectorizer["type"])
+    model = vectorizer["model"]
+    dtype = vectorizer.get("dtype", "float32")
 
-#     args = {"model": vectorizer["model"]}
-#     if cache:
-#         emb_cache = EmbeddingsCache(**cache)
-#         args["cache"] = emb_cache
+    args = {"model": model, "dtype": dtype}
+    if cache:
+        emb_cache = EmbeddingsCache(**cache)
+        args["cache"] = emb_cache
 
-#     if vectorizer_type == Vectorizers.cohere:
-#         return CohereTextVectorizer(**args)
-#     elif vectorizer_type == Vectorizers.openai:
-#         return OpenAITextVectorizer(**args)
-#     elif vectorizer_type == Vectorizers.azure_openai:
-#         return AzureOpenAITextVectorizer(**args)
-#     elif vectorizer_type == Vectorizers.hf:
-#         return HFTextVectorizer(**args)
-#     elif vectorizer_type == Vectorizers.mistral:
-#         return MistralAITextVectorizer(**args)
-#     elif vectorizer_type == Vectorizers.vertexai:
-#         return VertexAITextVectorizer(**args)
-#     elif vectorizer_type == Vectorizers.voyageai:
-#         return VoyageAITextVectorizer(**args)
-#     else:
-#         raise ValueError(f"Unsupported vectorizer type: {vectorizer_type}")
+    if vectorizer_type == Vectorizers.cohere:
+        return CohereTextVectorizer(**args)
+    elif vectorizer_type == Vectorizers.openai:
+        return OpenAITextVectorizer(**args)
+    elif vectorizer_type == Vectorizers.azure_openai:
+        return AzureOpenAITextVectorizer(**args)
+    elif vectorizer_type == Vectorizers.hf:
+        return HFTextVectorizer(**args)
+    elif vectorizer_type == Vectorizers.mistral:
+        return MistralAITextVectorizer(**args)
+    elif vectorizer_type == Vectorizers.vertexai:
+        return VertexAITextVectorizer(**args)
+    elif vectorizer_type == Vectorizers.voyageai:
+        return VoyageAITextVectorizer(**args)
+    else:
+        raise ValueError(f"Unsupported vectorizer type: {vectorizer_type}")
 
 
 def get_last_index_settings(redis_url):
@@ -76,19 +70,38 @@ def set_last_index_settings(redis_url, index_settings):
     client.json().set("ret-opt:last_schema", Path.root_path(), index_settings)
 
 
-def check_recreate_schema(index_settings, last_index_settings):
+def check_recreate(index_settings, last_index_settings):
+    embedding_settings = index_settings.pop("embedding") if index_settings else None
+    last_embedding_settings = (
+        last_index_settings.pop("embedding") if last_index_settings else None
+    )
+
     if not last_index_settings:
-        return True
-    if last_index_settings and index_settings != last_index_settings:
-        return True
-    return False
+        recreate_index = True
+        recreate_data = True
+    elif index_settings != last_index_settings:
+        recreate_index = True
+
+        if embedding_settings != last_embedding_settings:
+            recreate_data = True
+        else:
+            recreate_data = False
+    else:
+        recreate_index = False
+        recreate_data = False
+
+    return recreate_index, recreate_data
 
 
 def get_embedding_model(
-    embedding_model: EmbeddingModel, redis_url: str
+    embedding_model: EmbeddingModel, redis_url: str, dtype=None
 ) -> BaseVectorizer:
+    vectorizer = {"type": embedding_model.type, "model": embedding_model.model}
+    if dtype:
+        vectorizer["dtype"] = dtype
+
     return vectorizer_from_dict(
-        vectorizer={"type": embedding_model.type, "model": embedding_model.model},
+        vectorizer=vectorizer,
         cache={
             "name": embedding_model.embedding_cache_name,
             "redis_url": redis_url,
@@ -96,11 +109,18 @@ def get_embedding_model(
     )
 
 
-def load_study_config(config_path: str) -> StudyConfig:
+def load_bayes_study_config(config_path: str) -> BayesStudyConfig:
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
 
-    return StudyConfig(**config)
+    return BayesStudyConfig(**config)
+
+
+def load_grid_study_config(config_path: str) -> GridStudyConfig:
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+
+    return GridStudyConfig(**config)
 
 
 def load_json(file_path: str) -> dict:
@@ -109,40 +129,49 @@ def load_json(file_path: str) -> dict:
     return data
 
 
-def schema_from_settings(settings: TrialSettings, additional_schema_fields=None):
+def schema_from_settings(index_settings: IndexSettings):
     schema = {
-        "index": {"name": "optimize", "prefix": "ret-opt"},
+        "index": {"name": index_settings.name, "prefix": index_settings.prefix},
         "fields": [
-            {"name": "_id", "type": "tag"},
-            {"name": "text", "type": "text"},
-            {"name": "title", "type": "text"},
+            {"name": index_settings.id_field_name, "type": "tag"},
+            {"name": index_settings.text_field_name, "type": "text"},
             {
-                "name": "vector",
+                "name": index_settings.vector_field_name,
                 "type": "vector",
                 "attrs": {
-                    "dims": settings.embedding.dim,
-                    "distance_metric": settings.index.distance_metric,
-                    "algorithm": settings.index.algorithm,
-                    "datatype": settings.index.vector_data_type,
-                    "ef_construction": settings.index.ef_construction,
-                    "ef_runtime": settings.index.ef_runtime,
-                    "m": settings.index.m,
+                    "dims": index_settings.vector_dim,
+                    "distance_metric": index_settings.distance_metric,
+                    "algorithm": index_settings.algorithm,
+                    "datatype": index_settings.vector_data_type,
+                    "ef_construction": index_settings.ef_construction,
+                    "ef_runtime": index_settings.ef_runtime,
+                    "m": index_settings.m,
                 },
             },
         ],
     }
 
     # define a custom search method to do pre-filtering etc.
-    if additional_schema_fields:
-        for field in additional_schema_fields:
-            schema["fields"].append(field)  # type: ignore
+    if index_settings.additional_fields:
+        for field in index_settings.additional_fields:
+            schema["fields"].append({"name": field.name, "type": field.type})  # type: ignore
 
     return schema
 
 
-def index_from_schema(schema, redis_url, recreate=True):
+def index_from_schema(schema, redis_url, recreate_index=True):
     index = SearchIndex.from_dict(schema, redis_url=redis_url)
 
-    if recreate:
-        index.create(overwrite=True, drop=True)
+    if recreate_index:
+        index.create(overwrite=True, drop=False)
+
     return index
+
+
+def eval_trial_metrics(qrels: Qrels, run: Run):
+    ndcg = evaluate(qrels, run, metrics=["ndcg"])
+    recall = evaluate(qrels, run, metrics=["recall"])
+    f1 = evaluate(qrels, run, metrics=["f1"])
+    precision = evaluate(qrels, run, metrics=["precision"])
+
+    return {"ndcg": ndcg, "recall": recall, "f1": f1, "precision": precision}
