@@ -11,7 +11,6 @@ from redis_retrieval_optimizer.schema import GridStudyConfig, SearchMethodInput
 from redis_retrieval_optimizer.search_methods import SEARCH_METHOD_MAP
 
 
-# TODO: generalize metric update functions
 def update_metric_row(
     metrics, grid_study_config, search_method, embedding_settings, trial_metrics: dict
 ):
@@ -115,6 +114,12 @@ def run_grid_study(
 
     metrics: dict = {
         "search_method": [],
+        "total_indexing_time": [],
+        "avg_query_time": [],
+        "recall@k": [],
+        "ndcg@k": [],
+        "f1@k": [],
+        "precision": [],
         "ret_k": [],
         "algorithm": [],
         "ef_construction": [],
@@ -124,12 +129,6 @@ def run_grid_study(
         "vector_data_type": [],
         "model": [],
         "model_dim": [],
-        "recall@k": [],
-        "ndcg@k": [],
-        "f1@k": [],
-        "total_indexing_time": [],
-        "precision": [],
-        "avg_query_time": [],
     }
 
     for i, embedding_model in enumerate(grid_study_config.embedding_models):
@@ -183,4 +182,4 @@ def run_grid_study(
 
             persist_metrics(metrics, redis_url, grid_study_config.study_id)
 
-    return metrics
+    return pd.DataFrame(metrics)

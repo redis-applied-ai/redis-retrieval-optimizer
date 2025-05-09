@@ -22,4 +22,4 @@ embedding_models: # embedding cache would be awesome here.
     dim: 384
     embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
 
-search_methods: ["bm25", "vector"]
+search_methods: ["bm25", "vector", "lin_combo", "rerank", "weighted_rrf"] # must match what is passed in search_method_map

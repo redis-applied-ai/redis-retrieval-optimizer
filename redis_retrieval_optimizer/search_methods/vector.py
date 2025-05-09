@@ -29,7 +29,7 @@ def make_score_dict_vec(res):
 
 def gather_vector_results(
     search_method_input: SearchMethodInput,
-):
+) -> SearchMethodOutput:
     redis_res_vector = {}
 
     for key in search_method_input.raw_queries:

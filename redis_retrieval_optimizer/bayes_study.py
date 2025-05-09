@@ -6,37 +6,38 @@ from typing import Callable
 
 import optuna
 import pandas as pd
-from ranx import Qrels, Run
+from ranx import Qrels
 from redis import Redis
 from redis.commands.json.path import Path
 
 # import search_methods.bm25
 import redis_retrieval_optimizer.utils as utils
-from redis_retrieval_optimizer.schema import TrialSettings, get_trial_settings
+from redis_retrieval_optimizer.schema import (
+    SearchMethodInput,
+    TrialSettings,
+    get_trial_settings,
+)
 from redis_retrieval_optimizer.search_methods import SEARCH_METHOD_MAP
 
 warnings.filterwarnings("ignore")
 
 METRICS: dict = {
     "search_method": [],
+    "total_indexing_time": [],
+    "avg_query_time": [],
+    "model": [],
+    "model_dim": [],
     "ret_k": [],
+    "recall@k": [],
+    "ndcg@k": [],
+    "f1@k": [],
+    "precision": [],
     "algorithm": [],
     "ef_construction": [],
     "ef_runtime": [],
     "m": [],
     "distance_metric": [],
     "vector_data_type": [],
-    "model": [],
-    "model_dim": [],
-    "recall@k": [],
-    "ndcg@k": [],
-    "f1@k": [],
-    "total_indexing_time": [],
-    "precision": [],
-    # "indexing_time": [],
-    # "avg_query_latency": [],
-    # "obj_val": [],
-    # "retriever": [],
 }
 
 
@@ -56,10 +57,7 @@ def update_metric_row(trial_settings: TrialSettings, trial_metrics: dict):
     METRICS["precision"].append(trial_metrics["precision"])
     METRICS["f1@k"].append(trial_metrics["f1"])
     METRICS["total_indexing_time"].append(trial_metrics["total_indexing_time"])
-    # METRICS["embedding_latency"].append(trial_metrics["embedding_latency"])
-    # METRICS["avg_query_latency"].append(eval_obj.avg_query_latency)
-    # METRICS["obj_val"].append(eval_obj.obj_val)
-    # METRICS["retriever"].append(str(eval_obj.retriever.__name__))
+    METRICS["avg_query_time"].append(trial_metrics["avg_query_time"])
 
 
 def persist_metrics(
@@ -140,13 +138,19 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
     queries = utils.load_json(study_config.queries)
     qrels = Qrels(utils.load_json(study_config.qrels))
 
-    trial_results = search_fn(queries, trial_index, emb_model)
-    if not trial_results:
-        raise ValueError("No results dafaq")
-    run = Run(trial_results)
+    search_input = SearchMethodInput(
+        index=trial_index,
+        raw_queries=queries,
+        emb_model=emb_model,
+    )
 
-    trial_metrics = utils.eval_trial_metrics(qrels, run)
+    search_method_output = search_fn(search_input)
+
+    trial_metrics = utils.eval_trial_metrics(qrels, search_method_output.run)
     trial_metrics["total_indexing_time"] = total_indexing_time
+    trial_metrics["avg_query_time"] = utils.get_query_time_stats(
+        search_method_output.query_metrics.query_times
+    )["avg_query_time"]
 
     # save results as we go in case of failure
     persist_metrics(redis_url, trial_settings, trial_metrics, study_config.study_id)
@@ -192,6 +196,4 @@ def run_bayes_study(
     print(f"Best Configuration: {best_trial.number}: {best_trial.params}:\n\n")
     print(f"Best Score: {best_trial.values}\n\n")
 
-    pd.DataFrame(METRICS).to_csv(
-        f"data/{study_config.study_id}_metrics.csv", index=False
-    )
+    return pd.DataFrame(METRICS)
