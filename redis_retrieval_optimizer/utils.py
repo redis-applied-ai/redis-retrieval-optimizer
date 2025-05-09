@@ -98,7 +98,10 @@ def get_embedding_model(
 ) -> BaseVectorizer:
     vectorizer = {"type": embedding_model.type, "model": embedding_model.model}
     if dtype:
+        # optimization can override input dtype
         vectorizer["dtype"] = dtype
+    else:
+        vectorizer["dtype"] = embedding_model.dtype
 
     return vectorizer_from_dict(
         vectorizer=vectorizer,
@@ -175,3 +178,22 @@ def eval_trial_metrics(qrels: Qrels, run: Run):
     precision = evaluate(qrels, run, metrics=["precision"])
 
     return {"ndcg": ndcg, "recall": recall, "f1": f1, "precision": precision}
+
+
+def get_query_time_stats(query_times: list[float]):
+    """
+    Calculate the average and standard deviation of query times.
+    """
+    import numpy as np
+
+    avg_query_time = np.mean(query_times)
+    std_query_time = np.std(query_times)
+    min_query_time = np.min(query_times)
+    max_query_time = np.max(query_times)
+
+    return {
+        "avg_query_time": avg_query_time,
+        "std_query_time": std_query_time,
+        "min_query_time": min_query_time,
+        "max_query_time": max_query_time,
+    }

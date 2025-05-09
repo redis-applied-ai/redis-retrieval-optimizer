@@ -1,4 +1,8 @@
+from ranx import Run
 from redisvl.query import VectorQuery
+
+from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
+from redis_retrieval_optimizer.search_methods.base import run_search_w_time
 
 
 def vector_query(query: str, num_results: int, emb_model) -> VectorQuery:
@@ -23,17 +27,22 @@ def make_score_dict_vec(res):
     return scores_dict
 
 
-def gather_vector_results(queries, index, emb_model):
+def gather_vector_results(
+    search_method_input: SearchMethodInput,
+):
     redis_res_vector = {}
 
-    for key in queries:
-        text_query = queries[key]
-        vec_query = vector_query(text_query, 10, emb_model)
-        # try:
-        res = index.query(vec_query)
+    for key in search_method_input.raw_queries:
+        text_query = search_method_input.raw_queries[key]
+        vec_query = vector_query(text_query, 10, search_method_input.emb_model)
+        res = run_search_w_time(
+            search_method_input.index, vec_query, search_method_input.query_metrics
+        )
+
         score_dict = make_score_dict_vec(res)
-        # except Exception as e:
-        #     print(f"failed for {key}, {text_query}")
-        #     score_dict = {}
         redis_res_vector[key] = score_dict
-    return redis_res_vector
+
+    return SearchMethodOutput(
+        run=Run(redis_res_vector),
+        query_metrics=search_method_input.query_metrics,
+    )

@@ -1,7 +1,41 @@
-from typing import Optional
+from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+from ranx import Run
+from redisvl.index import SearchIndex
+from redisvl.utils.vectorize.base import BaseVectorizer
+
+
+class QueryMetrics(BaseModel):
+    query_times: list[float] = []
+
+
+class SearchMethodInput(BaseModel):
+    raw_queries: Any
+    index: Any
+    query_metrics: QueryMetrics = QueryMetrics()
+    emb_model: BaseVectorizer = None
+    kwargs: dict = {}
+
+    @field_validator("index")
+    @classmethod
+    def validate_index(cls, v):
+        if not isinstance(v, SearchIndex):
+            raise ValueError("Must be a SearchIndex instance")
+        return v
+
+
+class SearchMethodOutput(BaseModel):
+    run: Any
+    query_metrics: QueryMetrics
+
+    @field_validator("run")
+    @classmethod
+    def validate_run(cls, v):
+        if not isinstance(v, Run):
+            raise ValueError("Must be a ranx Run instance")
+        return v
 
 
 class AdditionalField(BaseModel):

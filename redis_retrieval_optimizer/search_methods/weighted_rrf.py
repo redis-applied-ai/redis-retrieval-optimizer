@@ -1,5 +1,9 @@
+import time
 from typing import Any, Dict, List
 
+from ranx import Run
+
+from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.bm25 import bm25_query_optional
 from redis_retrieval_optimizer.search_methods.lin_combo import vector_query_filter
 
@@ -61,13 +65,22 @@ def make_score_dict_w_rff(res):
     return {rec[0]: rec[1] for rec in res}
 
 
-def gather_weighted_rrf(queries, index, emb_model):
+def gather_weighted_rrf(search_method_input: SearchMethodInput) -> SearchMethodOutput:
     redis_res_w_rrf = {}
 
-    for key in queries:
-        text_query = queries[key]
+    for key in search_method_input.raw_queries:
+        text_query = search_method_input.raw_queries[key]
         try:
-            w_rff = weighted_rrf(index, emb_model, text_query, num_results=10, k=20)
+            start = time.time()
+            w_rff = weighted_rrf(
+                search_method_input.index,
+                search_method_input.emb_model,
+                text_query,
+                num_results=10,
+                k=20,
+            )
+            query_time = time.time() - start
+            search_method_input.query_metrics.query_times.append(query_time)
             scores_dict = make_score_dict_w_rff(w_rff)
         except:
             print(f"failed for {key}, {text_query}")
@@ -75,4 +88,7 @@ def gather_weighted_rrf(queries, index, emb_model):
 
         redis_res_w_rrf[key] = scores_dict
 
-    return redis_res_w_rrf
+    return SearchMethodOutput(
+        run=Run(redis_res_w_rrf),
+        query_metrics=search_method_input.query_metrics,
+    )

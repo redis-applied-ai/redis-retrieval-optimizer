@@ -1,6 +1,15 @@
+from ranx import Run
 from redisvl.query import FilterQuery
 from redisvl.query.filter import Text
 from redisvl.utils.token_escaper import TokenEscaper
+from redisvl.utils.vectorize.base import BaseVectorizer
+
+from redis_retrieval_optimizer.schema import (
+    QueryMetrics,
+    SearchMethodInput,
+    SearchMethodOutput,
+)
+from redis_retrieval_optimizer.search_methods.base import run_search_w_time
 
 STOPWORDS_EN = set(
     [
@@ -238,18 +247,23 @@ def make_score_dict(res):
     return {rec["_id"]: rec["score"] for rec in res}
 
 
-def gather_bm25_results(queries, index, emb_model):
+def gather_bm25_results(search_method_input: SearchMethodInput) -> SearchMethodOutput:
     redis_res_bm25 = {}
 
-    for key in queries:
-        text_query = queries[key]
+    for key in search_method_input.raw_queries:
+        text_query = search_method_input.raw_queries[key]
         ft_query = bm25_query("text", text_query, 10)
         try:
-            res = index.query(ft_query)
+            res = run_search_w_time(
+                search_method_input.index, ft_query, search_method_input.query_metrics
+            )
             score_dict = make_score_dict(res)
         except Exception as e:
             print(f"failed for {key}, {text_query}: error: {e}")
             score_dict = {}
         redis_res_bm25[key] = score_dict
 
-    return redis_res_bm25
+    return SearchMethodOutput(
+        run=Run(redis_res_bm25),
+        query_metrics=search_method_input.query_metrics,
+    )

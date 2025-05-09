@@ -1,13 +1,13 @@
 from typing import Callable
 
 import pandas as pd
-from ranx import Qrels, Run
+from ranx import Qrels
 from redis import Redis
 from redis.commands.json.path import Path
 from redisvl.index import SearchIndex
 
 import redis_retrieval_optimizer.utils as utils
-from redis_retrieval_optimizer.schema import GridStudyConfig
+from redis_retrieval_optimizer.schema import GridStudyConfig, SearchMethodInput
 from redis_retrieval_optimizer.search_methods import SEARCH_METHOD_MAP
 
 
@@ -32,22 +32,15 @@ def update_metric_row(
     metrics["precision"].append(trial_metrics["precision"])
     metrics["f1@k"].append(trial_metrics["f1"])
     metrics["total_indexing_time"].append(trial_metrics["total_indexing_time"])
-    # metrics["embedding_latency"].append(trial_metrics["embedding_latency"])
-    # metrics["avg_query_latency"].append(eval_obj.avg_query_latency)
-    # metrics["obj_val"].append(eval_obj.obj_val)
-    # metrics["retriever"].append(str(eval_obj.retriever.__name__))
+    metrics["avg_query_time"].append(trial_metrics["query_stats"]["avg_query_time"])
     return metrics
 
 
 def persist_metrics(metrics, redis_url, study_id):
-    # update_metric_row(trial_settings, trial_metrics)
-    # logging.info(f"Saving metrics for study: {study_id}, {METRICS=}")
-
     client = Redis.from_url(redis_url)
     client.json().set(f"study:{study_id}", Path.root_path(), metrics)
 
 
-# TODO: generalize with other study configs
 def init_index_from_grid_settings(
     grid_study_config: GridStudyConfig, redis_url: str, corpus_processor: Callable
 ) -> SearchIndex:
@@ -78,16 +71,19 @@ def init_index_from_grid_settings(
         utils.set_last_index_settings(redis_url, index_settings)
     else:
         last_index_settings = utils.get_last_index_settings(redis_url)
-        recreate = utils.check_recreate_schema(index_settings, last_index_settings)
+        recreate_index, recreate_data = utils.check_recreate(
+            index_settings, last_index_settings
+        )
 
         schema = utils.schema_from_settings(
             grid_study_config.index_settings,
         )
 
-        index = SearchIndex.from_dict(schema, redis_url=redis_url)
-        index.create(overwrite=False, drop=False)
+        if recreate_index:
+            index = SearchIndex.from_dict(schema, redis_url=redis_url)
+            index.create(overwrite=False, drop=False)
 
-        if recreate:
+        if recreate_data:
             emb_model = utils.get_embedding_model(
                 grid_study_config.embedding_models[0], redis_url
             )
@@ -133,10 +129,7 @@ def run_grid_study(
         "f1@k": [],
         "total_indexing_time": [],
         "precision": [],
-        # "indexing_time": [],
-        # "avg_query_latency": [],
-        # "obj_val": [],
-        # "retriever": [],
+        "avg_query_time": [],
     }
 
     for i, embedding_model in enumerate(grid_study_config.embedding_models):
@@ -164,13 +157,21 @@ def run_grid_study(
             print(f"Running search method: {search_method}")
             # get search method to try
             search_fn = search_method_map[search_method]
-            trial_results = search_fn(queries, index, emb_model)
+            search_input = SearchMethodInput(
+                index=index,
+                raw_queries=queries,
+                emb_model=emb_model,
+            )
 
-            run = Run(trial_results)
+            search_method_output = search_fn(search_input)
 
-            trial_metrics = utils.eval_trial_metrics(qrels, run)
-            # TODO: real values
-            trial_metrics["total_indexing_time"] = 0
+            trial_metrics = utils.eval_trial_metrics(qrels, search_method_output.run)
+            trial_metrics["total_indexing_time"] = round(
+                float(index.info()["total_indexing_time"]) / 1000, 5
+            )
+            trial_metrics["query_stats"] = utils.get_query_time_stats(
+                search_method_output.query_metrics.query_times
+            )
 
             metrics = update_metric_row(
                 metrics,
@@ -181,8 +182,5 @@ def run_grid_study(
             )
 
             persist_metrics(metrics, redis_url, grid_study_config.study_id)
-            pd.DataFrame(metrics).to_csv(
-                f"data/{grid_study_config.study_id}_metrics.csv", index=False
-            )
 
     return metrics

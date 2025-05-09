@@ -1,8 +1,12 @@
+import time
+
+from ranx import Run
 from redis.commands.search.aggregation import AggregateRequest, Desc
 from redisvl.query import VectorQuery
 from redisvl.query.filter import Text
 from redisvl.redis.utils import convert_bytes, make_dict
 
+from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.bm25 import tokenize_and_escape_query
 
 
@@ -51,7 +55,9 @@ def linear_combo(
     return req, query_params
 
 
-def gather_lin_combo_results(queries, index, emb_model, alpha=0.7):
+def gather_lin_combo_results(
+    search_method_input: SearchMethodInput,
+) -> SearchMethodOutput:
     redis_res_lin_combo = {}
 
     def agg_scores_dict(res):
@@ -59,16 +65,27 @@ def gather_lin_combo_results(queries, index, emb_model, alpha=0.7):
             results = [make_dict(row) for row in convert_bytes(res.rows)]
             return {rec["_id"]: float(rec["hybrid_score"]) for rec in results}
 
-    for key in queries:
-        text_query = queries[key]
+    for key in search_method_input.raw_queries:
+        text_query = search_method_input.raw_queries[key]
         alpha = 0.8  # weight for cosine similarity vs bm25
-        agg_req, query_params = linear_combo(emb_model, text_query, alpha, 10)
+
+        agg_req, query_params = linear_combo(
+            search_method_input.emb_model, text_query, alpha, 10
+        )
         try:
-            res = index.aggregate(agg_req, query_params=query_params)
+            start = time.time()
+            res = search_method_input.index.aggregate(
+                agg_req, query_params=query_params
+            )
+            query_time = time.time() - start
+            search_method_input.query_metrics.query_times.append(query_time)
             score_dict = agg_scores_dict(res)
         except Exception as e:
             print(f"failed for {key}, {text_query}")
             score_dict = {}
         redis_res_lin_combo[key] = score_dict
 
-    return redis_res_lin_combo
+    return SearchMethodOutput(
+        run=Run(redis_res_lin_combo),
+        query_metrics=search_method_input.query_metrics,
+    )
