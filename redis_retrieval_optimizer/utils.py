@@ -162,11 +162,11 @@ def schema_from_settings(index_settings: IndexSettings):
     return schema
 
 
-def index_from_schema(schema, redis_url, recreate_index=True):
+def index_from_schema(schema, redis_url, recreate_index, recreate_data):
     index = SearchIndex.from_dict(schema, redis_url=redis_url)
 
     if recreate_index:
-        index.create(overwrite=True, drop=False)
+        index.create(overwrite=True, drop=recreate_data)
 
     return index
 

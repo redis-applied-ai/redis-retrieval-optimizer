@@ -243,8 +243,18 @@ def bm25_query_optional(
     )
 
 
-def make_score_dict(res):
-    return {rec["_id"]: rec["score"] for rec in res}
+def make_score_dict_bm25(res):
+    scores_dict = {}
+    if not res:
+        return {"no_match": 1}
+
+    for rec in res:
+        if "_id" in rec:
+            scores_dict[rec["_id"]] = rec["score"]
+        else:
+            scores_dict["no_match"] = 1
+
+    return scores_dict
 
 
 def gather_bm25_results(search_method_input: SearchMethodInput) -> SearchMethodOutput:
@@ -257,7 +267,7 @@ def gather_bm25_results(search_method_input: SearchMethodInput) -> SearchMethodO
             res = run_search_w_time(
                 search_method_input.index, ft_query, search_method_input.query_metrics
             )
-            score_dict = make_score_dict(res)
+            score_dict = make_score_dict_bm25(res)
         except Exception as e:
             print(f"failed for {key}, {text_query}: error: {e}")
             score_dict = {}

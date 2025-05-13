@@ -1,6 +1,5 @@
 <div align="center">
 <div><img src="https://raw.githubusercontent.com/redis/redis-vl-python/main/docs/_static/Redis_Logo_Red_RGB.svg" style="width: 130px"> </div>
-<h1>Retrieval Optimizer</h1>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Language](https://img.shields.io/github/languages/top/redis-applied-ai/retrieval-optimizer)
@@ -8,15 +7,28 @@
 
 </div>
 
-Search and information retrieval is a challenging problem. With the proliferation of vector search tools in the market, focus has heavily shifted towards SEO and marketing wins, rather than fundamental quality.
+# Retrieval Optimizer
 
-The **Retrieval Optimizer** from Redis focuses on measuring and improving retrieval quality. This framework helps determine optimal **embedding models**, **retrieval strategies**, and **index configurations** for your specific data and use case. It implements all redis indexing and embedding caching for you to quickly iterate different scenarios.
+Search and information retrieval is a challenging and often misunderstood problem. With the proliferation of vector search tools on the market, attention has increasingly shifted toward SEO gains and marketing claims—sometimes at the expense of actual retrieval quality.
+
+The **Retrieval Optimizer** from Redis is designed to bring focus back to what matters: delivering relevant, high-quality results. This flexible framework enables you to systematically measure and improve retrieval performance for your specific data and use case. Rather than relying on guesswork or vague intuition, the Retrieval Optimizer helps you establish **baseline metrics** that serve as a foundation for meaningful evaluation and iteration.
+
+Beyond accuracy alone, it also supports evaluating critical tradeoffs between **cost, speed, and latency**, helping you understand how different embedding models, retrieval strategies, and index configurations impact overall system performance. The ultimate goal is to enable **metrics-driven development** for your search application—ensuring that decisions are grounded in data, not assumptions.
+
+# Getting Started
+
+The Retrieval Optimizer supports two *study* types: **Grid** and **Bayesian Optimization**. Each is suited to a different stage of building a high-quality search system.
+
+### Grid
+
+Use a grid study to explore the impact of different **embedding models** and **retrieval strategies**. These are typically the most important factors influencing search performance. This mode is ideal for establishing a performance baseline and identifying which techniques work best for your dataset.
+
+### Bayesian Optimization
+
+Once you've identified a solid starting point, use Bayesian optimization to **fine-tune your index configuration**. It intelligently selects the most promising combinations to try—saving time compared to exhaustive testing. This mode is especially useful for balancing **cost, speed, and latency** as you work toward a production-ready solution.
 
 
-# Quick start
-
-## Grid study
-Tries all options specified good for studies where the number of configurations you're testing is small or you want to be exact.
+## Quick start: grid study
 
 Define study config
 ```yaml
@@ -69,7 +81,7 @@ metrics = run_grid_study(
 Example output
 ![grid study output](/reference/grid_output.png)
 
-## Bayesian Optimization
+## Quick start: bayesian optimization
 Selects the next best configuration to try based on a heuristic. This is good when it would take a very long time to test all possible configurations.
 
 Study config:
@@ -136,164 +148,117 @@ metrics = run_bayes_study(
 Example output
 ![bayes study output](/reference/bayes_output.png)
 
-## Custom processors/search methods
+## Custom Processors and Search Methods
 
-With the retrieval optimizer you can specify your own search methods and corpus processor functions.
+The Retrieval Optimizer is designed to be flexible and extensible. You can define your own **corpus processors** and **search methods** to support different data formats and retrieval techniques. This is especially useful when working with domain-specific data or testing out experimental search strategies.
 
-Study config
+### Why Custom Functions Matter
+
+Every search application is unique. You might store metadata differently, rely on custom vector filtering, or want to experiment with hybrid techniques. The framework makes it easy to plug in your own logic without needing to rewrite core infrastructure.
+
+---
+
+### Example: Custom Config
+
+This example defines a study where we compare two vector-based methods—one using a simple vector query, and another that filters by metadata before vector search.
+
 ```yaml
-# paths to necessary data files
-corpus: "data/car_corpus.json" # optional if from_existing
+corpus: "data/car_corpus.json"
 queries: "data/car_queries.json"
 qrels: "data/car_qrels.json"
 
-# vector field names
 index_settings:
   name: "car"
-  prefix: "car" # prefix for index name
-  vector_field_name: "vector" # name of the vector field to search on
-  text_field_name: "text" # name of the text field for lexical search
+  prefix: "car"
+  vector_field_name: "vector"
+  text_field_name: "text"
   from_existing: false
   additional_fields:
     - name: "make"
       type: "tag"
     - name: "model"
       type: "tag"
-  vector_dim: 384 # should match first embedding model or from_existing
+  vector_dim: 384
 
-# will run all search methods for each embedding model and then iterate
-embedding_models: # embedding cache would be awesome here.
-# if from_existing is true, first record is assumed to be the one used to create the index
+embedding_models:
   - type: "hf"
     model: "sentence-transformers/all-MiniLM-L6-v2"
     dim: 384
-    embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
+    embedding_cache_name: "vec-cache"
 
-search_methods: ["basic_vector", "pre_filter_vector"] # must match what is passed in search_method_map
+search_methods: ["basic_vector", "pre_filter_vector"]
 ```
 
-Custom search methods:
+---
 
-Note: A search method can be whatever you want it just has to take a `SearchMethodInput` and return a `SearchMethodOutput`. Between taking the input and formatting the output - go wild!
+### Writing Custom Search Methods
+
+Search methods can be anything you want—as long as they accept a `SearchMethodInput` and return a `SearchMethodOutput`. This allows you to test new retrieval strategies, add filters, or layer on post-processing logic.
 
 ```python
-from ranx import Run
-from redis_retrieval_optimizer.search_methods.base import run_search_w_time
-from redisvl.query import VectorQuery
-from redisvl.query.filter import Tag
-
-from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
-from redis_retrieval_optimizer.search_methods.vector import make_score_dict_vec
-
-def vector_query(query_info, num_results: int, emb_model) -> VectorQuery:
-    vector = emb_model.embed(query_info["query"], as_buffer=True)
-
-    return VectorQuery(
-        vector=vector,
-        vector_field_name="vector",
-        num_results=num_results,
-        return_fields=["_id", "make", "model", "text"],  # update to read from env maybe?
-    )
-
-def pre_filter_query(query_info, num_results, emb_model) -> VectorQuery:
-    vec = emb_model.embed(query_info["query"])
-    make = query_info["query_metadata"]["make"]
-    model = query_info["query_metadata"]["model"]
-
-    filter = (Tag("make") == make) & (Tag("model") == model)
-
-    # Create a vector query
-    query = VectorQuery(
-        vector=vec,
-        vector_field_name="vector",
-        num_results=num_results,
-        filter_expression=filter,
-        return_fields=["_id", "make", "model", "text"]
-    )
-
-    return query
-
-def gather_pre_filter_results(search_method_input: SearchMethodInput) -> SearchMethodOutput:
-    redis_res_vector = {}
-
-    for key in search_method_input.raw_queries:
-        query_info = search_method_input.raw_queries[key]
-        query = pre_filter_query(query_info, 10, search_method_input.emb_model)
-        res = run_search_w_time(
-            search_method_input.index, query, search_method_input.query_metrics
-        )
-        score_dict = make_score_dict_vec(res)
-
-        redis_res_vector[key] = score_dict
-
-    return SearchMethodOutput(
-        run=Run(redis_res_vector),
-        query_metrics=search_method_input.query_metrics,
-    )
-
-
 def gather_vector_results(search_method_input: SearchMethodInput) -> SearchMethodOutput:
     redis_res_vector = {}
 
-    for key in search_method_input.raw_queries:
-        text_query = search_method_input.raw_queries[key]
-        vec_query = vector_query(text_query, 10, search_method_input.emb_model)
-        res = run_search_w_time(
-            search_method_input.index, vec_query, search_method_input.query_metrics
-        )
+    for key, query_info in search_method_input.raw_queries.items():
+        query = vector_query(query_info, 10, search_method_input.emb_model)
+        res = run_search_w_time(search_method_input.index, query, search_method_input.query_metrics)
         score_dict = make_score_dict_vec(res)
         redis_res_vector[key] = score_dict
 
-    return SearchMethodOutput(
-        run=Run(redis_res_vector),
-        query_metrics=search_method_input.query_metrics,
-    )
-
+    return SearchMethodOutput(run=Run(redis_res_vector), query_metrics=search_method_input.query_metrics)
 ```
 
-Custom corpus processor:
-
-The corpus you provide can be of any format as long as the corpus processing function provide returns an object that can be indexed according to the index_settings in the study config.
+For example, you can also include filters based on metadata fields:
 
 ```python
-def process_car_corpus(
-    corpus, emb_model
-):
-    corpus_data = []
-    corpus_texts = [c["text"] for c in corpus]
+def gather_pre_filter_results(search_method_input: SearchMethodInput) -> SearchMethodOutput:
+    redis_res_vector = {}
 
-    text_embeddings = emb_model.embed_many(corpus_texts, as_buffer=True)
+    for key, query_info in search_method_input.raw_queries.items():
+        query = pre_filter_query(query_info, 10, search_method_input.emb_model)
+        res = run_search_w_time(search_method_input.index, query, search_method_input.query_metrics)
+        score_dict = make_score_dict_vec(res)
+        redis_res_vector[key] = score_dict
 
-    for i, c in enumerate(corpus):
-        corpus_data.append(
-            {
-                "_id": c["item_id"],
-                "text": c["text"],
-                "make": c["query_metadata"]["make"],
-                "model": c["query_metadata"]["model"],
-                "vector": text_embeddings[i],
-            }
-        )
-
-    return corpus_data
+    return SearchMethodOutput(run=Run(redis_res_vector), query_metrics=search_method_input.query_metrics)
 ```
 
-Run custom study:
+---
+
+### Writing a Custom Corpus Processor
+
+Corpus formats can vary significantly. A custom processor transforms your raw data into the shape required for indexing in Redis.
 
 ```python
-import os
+def process_car_corpus(corpus, emb_model):
+    texts = [doc["text"] for doc in corpus]
+    embeddings = emb_model.embed_many(texts, as_buffer=True)
+
+    return [
+        {
+            "_id": doc["item_id"],
+            "text": doc["text"],
+            "make": doc["query_metadata"]["make"],
+            "model": doc["query_metadata"]["model"],
+            "vector": embeddings[i],
+        }
+        for i, doc in enumerate(corpus)
+    ]
+```
+
+---
+
+### Running the Custom Study
+
+Once you’ve defined your search methods and processor, simply pass them into the study runner:
+
+```python
 from redis_retrieval_optimizer.grid_study import run_grid_study
-from dotenv import load_dotenv
 
 CUSTOM_SEARCH_METHOD_MAP = {
     "basic_vector": gather_vector_results,
     "pre_filter_vector": gather_pre_filter_results,
 }
-
-# load environment variables containing necessary credentials
-load_dotenv()
-
-redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 metrics = run_grid_study(
     config_path="custom_grid_study_config.yaml",
@@ -303,53 +268,88 @@ metrics = run_grid_study(
 )
 ```
 
-# Data requirements
 
-### Queries
+Here's a polished and clearer version of your **Data Requirements** section, matching the tone and structure of the rest of the content. It emphasizes flexibility while giving users a concrete foundation to build from:
 
-Note: can be any form if you define a custom search methods that know how to unpack the objects correctly.
+---
 
-General form:
+## Data Requirements
+
+To run a retrieval study, you need three key datasets: **queries**, **corpus**, and **qrels**. The framework is flexible—data can be in any shape as long as you provide custom processors to interpret it. But if you're getting started, here's the expected format and some working examples to guide you.
+
+---
+
+### Corpus
+
+This is the full set of documents you'll be searching against. It’s what gets indexed into Redis. The default assumption is that each document has a `text` field to search or embed, but you can customize this via a corpus processor.
+
+**General structure**:
+
 ```json
 {
     "corpus_id": {
-        "text": "test to be searched on or vectorized",
-        "title": "associated title",
+        "text": "text to be searched or vectorized",
+        "title": "optional associated title"
     }
 }
 ```
 
-Concrete example:
+**Example**:
+
 ```json
 {
     "MED-10": {
-        "text": "Recent studies have suggested that statins, an established drug group in the prevention of cardiovascular mortality, could delay or prevent breast cancer recurrence but the effect on disease-specific mortality remains unclear. ...",
+        "text": "Recent studies have suggested that statins, an established drug group in the prevention of cardiovascular mortality, could delay or prevent breast cancer recurrence...",
         "title": "Statin Use and Breast Cancer Survival: A Nationwide Cohort Study from Finland"
-    },
-    ...
+    }
 }
 ```
 
-### Corpus
+> ✅ Tip: If you're indexing from a live Redis instance, you can skip providing a corpus file entirely by using `from_existing: true` in your config.
 
-Note: can be of any form if custom corpus processor provided. Also, can be read **directly from pre-existing index** if you already have a redis instance live.
+---
+
+### Queries
+
+These are the search inputs you'll evaluate against the corpus. Each query should have a unique ID and the query text.
+
+**General structure**:
+
+```json
+{
+    "query_id": "query text"
+}
+```
+
+**Example**:
+
+```json
+{
+    "PLAIN-2": "Do Cholesterol Statin Drugs Cause Breast Cancer?",
+    "PLAIN-12": "Exploiting Autophagy to Live Longer"
+}
+```
+
+> 💡 Using custom query metadata? That’s fine—just make sure your custom search method knows how to interpret it.
+
+---
 
 ### Qrels
 
-Qrels MUST be of the following form in order for the metrics to be calculated correctly.
+Qrels define the relevance of documents to each query. They are required for evaluating retrieval performance using metrics like NDCG, recall, precision, and F1.
 
-General form:
+**Required structure**:
+
 ```json
 {
     "query_id": {
-        "corpus_id": "score",
-        ...
-    },
-    ...
+        "corpus_id": relevance_score
+    }
 }
 ```
 
-Concrete example:
+**Example**:
+
 ```json
 {
     "PLAIN-2": {
@@ -357,14 +357,21 @@ Concrete example:
         "MED-2440": 1,
         "MED-2434": 1,
         "MED-2435": 1,
-        "MED-2436": 1,
+        "MED-2436": 1
     },
     "PLAIN-12": {
         "MED-2513": 2,
-        "MED-5237": 2,
-    },
+        "MED-5237": 2
+    }
 }
 ```
+
+> 🔍 Note: Relevance scores can be binary (`1` or `0`) for classification metrics or ranked (`2`, `1`, etc.) for ranking metrics like NDCG.
+
+---
+
+Let me know if you'd like to include downloadable examples or a link to a starter dataset like BEIR for people to clone and try out.
+
 
 # Contributing
 We love contributors if you have an addition follow this process:

@@ -76,7 +76,7 @@ class EmbeddingModel(BaseModel):
     type: str
     model: str
     dim: int
-    embedding_cache_name: str = ""
+    embedding_cache_name: str = "vec_cache"
     dtype: str = "float32"
     # redis_url should be set in the env
 

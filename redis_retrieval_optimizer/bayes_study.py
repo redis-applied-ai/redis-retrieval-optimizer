@@ -95,7 +95,9 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
     )
 
     schema_dict = utils.schema_from_settings(trial_settings.index_settings)
-    trial_index = utils.index_from_schema(schema_dict, redis_url, recreate_index)
+    trial_index = utils.index_from_schema(
+        schema_dict, redis_url, recreate_index, recreate_data
+    )
 
     emb_model = utils.get_embedding_model(
         trial_settings.embedding,
@@ -107,9 +109,13 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
         print("Recreating index...")
         corpus = utils.load_json(study_config.corpus)
         corpus_data = corpus_processor(corpus, emb_model)
+        corpus_size = len(corpus_data)
+        logging.info(f"Corpus size: {corpus_size}")
 
+        # reload data
         trial_index.load(corpus_data)
     else:
+        corpus_size = trial_index.info()["num_docs"]
         print("Skip recreate")
 
     while float(trial_index.info()["percent_indexed"]) < 1:
@@ -126,6 +132,10 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
 
     if num_docs == 0:
         raise ValueError("No documents indexed, check corpus and index settings")
+    elif num_docs != corpus_size:
+        print(
+            f"\n\n WARNING {num_docs=} != {corpus_size=}... Settings {recreate_index=}, {recreate_data=}"
+        )
 
     # save config since it loaded
     index_settings["embedding"] = trial_settings.embedding.model_dump()

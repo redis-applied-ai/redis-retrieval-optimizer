@@ -1,0 +1,22 @@
+{
+    "doc1": {
+        "text": "This document is about machine learning.",
+        "title": "Introduction to ML"
+    },
+    "doc2": {
+        "text": "Natural language processing is an important field.",
+        "title": "NLP Overview"
+    },
+    "doc3": {
+        "text": "Vector search enables semantic similarity.",
+        "title": "Vector Search"
+    },
+    "doc4": {
+        "text": "Deep learning models require significant training data.",
+        "title": "Deep Learning"
+    },
+    "doc5": {
+        "text": "Redis supports multiple data structures.",
+        "title": "Redis Features"
+    }
+}

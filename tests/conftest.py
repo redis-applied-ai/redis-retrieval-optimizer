@@ -2,7 +2,7 @@ import pytest
 
 
 @pytest.fixture(scope="session")
-def redis_url(redis_container):
+def redis_url():
     """
     Use the `DockerCompose` fixture to get host/port of the 'redis' service
     on container port 6379 (mapped to an ephemeral port on the host).

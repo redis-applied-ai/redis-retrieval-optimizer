@@ -1,0 +1,53 @@
+corpus: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/bayes_data/corpus.json
+embedding_models:
+- dim: 384
+  dtype: float32
+  embedding_cache_name: vec-cache
+  model: sentence-transformers/all-MiniLM-L6-v2
+  type: hf
+index_settings:
+  additional_fields:
+  - name: title
+    type: text
+  from_existing: false
+  name: test
+  text_field_name: text
+  vector_dim: 384
+  vector_field_name: vector
+optimization_settings:
+  algorithms:
+  - hnsw
+  distance_metrics:
+  - cosine
+  ef_construction:
+  - 100
+  - 150
+  - 200
+  - 250
+  - 300
+  ef_runtime:
+  - 10
+  - 20
+  - 30
+  - 50
+  m:
+  - 8
+  - 16
+  - 64
+  metric_weights:
+    embedding_latency: 1
+    f1_at_k: 1
+    total_indexing_time: 1
+  n_jobs: 1
+  n_trials: 10
+  ret_k:
+  - 1
+  - 10
+  vector_data_types:
+  - float16
+  - float32
+qrels: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/bayes_data/qrels.json
+queries: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/bayes_data/queries.json
+search_methods:
+- vector
+- lin_combo

@@ -80,7 +80,7 @@ def init_index_from_grid_settings(
 
         if recreate_index:
             index = SearchIndex.from_dict(schema, redis_url=redis_url)
-            index.create(overwrite=False, drop=False)
+            index.create(overwrite=True, drop=recreate_data)
 
         if recreate_data:
             emb_model = utils.get_embedding_model(
@@ -92,6 +92,8 @@ def init_index_from_grid_settings(
             corpus_data = corpus_processor(corpus, emb_model)
 
             index.load(corpus_data)
+
+        utils.set_last_index_settings(redis_url, index_settings)
 
     return index
 
