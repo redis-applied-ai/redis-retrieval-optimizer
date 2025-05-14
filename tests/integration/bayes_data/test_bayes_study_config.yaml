@@ -11,9 +11,7 @@ index_settings:
     type: text
   from_existing: false
   name: test
-  text_field_name: text
   vector_dim: 384
-  vector_field_name: vector
 optimization_settings:
   algorithms:
   - hnsw
@@ -50,4 +48,4 @@ qrels: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/bayes_data/q
 queries: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/bayes_data/queries.json
 search_methods:
 - vector
-- lin_combo
+- hybrid

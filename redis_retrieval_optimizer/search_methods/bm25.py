@@ -1,14 +1,11 @@
+import os
+
 from ranx import Run
 from redisvl.query import FilterQuery
 from redisvl.query.filter import Text
 from redisvl.utils.token_escaper import TokenEscaper
-from redisvl.utils.vectorize.base import BaseVectorizer
 
-from redis_retrieval_optimizer.schema import (
-    QueryMetrics,
-    SearchMethodInput,
-    SearchMethodOutput,
-)
+from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.base import run_search_w_time
 
 STOPWORDS_EN = set(
@@ -211,6 +208,7 @@ def tokenize_and_escape_query(user_query: str) -> str:
     )
 
 
+# TODO: update with the redisvl version
 def bm25_query(
     text_field: str, user_query: str, num_results: int, scorer="BM25STD"
 ) -> FilterQuery:
@@ -231,11 +229,12 @@ def bm25_query_optional(
     text_field: str, user_query: str, num_results: int, scorer="BM25STD"
 ) -> FilterQuery:
     """Generate a Redis full-text query given a user query string."""
+    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
     return (
         FilterQuery(
             filter_expression=f"~({Text(text_field) % tokenize_and_escape_query(user_query)})",
             num_results=num_results,
-            return_fields=["_id", "text", "title"],
+            return_fields=[ID_FIELD_NAME, text_field],
             dialect=2,
         )
         .scorer(scorer)
@@ -244,15 +243,17 @@ def bm25_query_optional(
 
 
 def make_score_dict_bm25(res):
+    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
+
     scores_dict = {}
     if not res:
-        return {"no_match": 1}
+        return {"no_match": 0}
 
     for rec in res:
-        if "_id" in rec:
-            scores_dict[rec["_id"]] = rec["score"]
+        if ID_FIELD_NAME in rec:
+            scores_dict[rec[ID_FIELD_NAME]] = rec["score"]
         else:
-            scores_dict["no_match"] = 1
+            scores_dict["no_match"] = 0
 
     return scores_dict
 
@@ -262,7 +263,7 @@ def gather_bm25_results(search_method_input: SearchMethodInput) -> SearchMethodO
 
     for key in search_method_input.raw_queries:
         text_query = search_method_input.raw_queries[key]
-        ft_query = bm25_query("text", text_query, 10)
+        ft_query = bm25_query(os.environ.get("TEXT_FIELD_NAME", "text"), text_query, 10)
         try:
             res = run_search_w_time(
                 search_method_input.index, ft_query, search_method_input.query_metrics

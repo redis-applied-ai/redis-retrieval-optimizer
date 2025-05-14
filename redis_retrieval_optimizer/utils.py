@@ -12,9 +12,7 @@ from redisvl.index import SearchIndex
 # from redisvl.utils.vectorize import vectorizer_from_dict TODO: update actual function in redisvl
 from redisvl.utils.vectorize.base import BaseVectorizer, Vectorizers
 from redisvl.utils.vectorize.text.azureopenai import AzureOpenAITextVectorizer
-from redisvl.utils.vectorize.text.bedrock import BedrockTextVectorizer
 from redisvl.utils.vectorize.text.cohere import CohereTextVectorizer
-from redisvl.utils.vectorize.text.custom import CustomTextVectorizer
 from redisvl.utils.vectorize.text.huggingface import HFTextVectorizer
 from redisvl.utils.vectorize.text.mistral import MistralAITextVectorizer
 from redisvl.utils.vectorize.text.openai import OpenAITextVectorizer

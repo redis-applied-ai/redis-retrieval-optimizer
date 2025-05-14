@@ -10,11 +10,12 @@ index_settings:
     type: text
   from_existing: false
   name: test
-  text_field_name: text
   vector_dim: 384
-  vector_field_name: vector
 qrels: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/grid_data/qrels.json
 queries: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/grid_data/queries.json
 search_methods:
 - bm25
 - vector
+- hybrid
+- weighted_rrf
+- rerank

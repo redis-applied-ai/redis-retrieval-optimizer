@@ -1,29 +1,33 @@
+import os
 import time
 from typing import Any, Dict, List
 
 from ranx import Run
-from redisvl.utils.rerank import HFCrossEncoderReranker
 
 from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.bm25 import bm25_query_optional
-from redis_retrieval_optimizer.search_methods.lin_combo import vector_query_filter
-
-# Load the ms marco MiniLM cross encoder model from huggingface
-reranker = HFCrossEncoderReranker("cross-encoder/ms-marco-MiniLM-L-6-v2")
+from redis_retrieval_optimizer.search_methods.hybrid import vector_query_filter
 
 
 def rerank(
     index,
+    reranker,
     emb_model,
     user_query: str,
-    num_results: int = 10,
+    num_results: int = 20,
 ) -> List[Dict[str, Any]]:
     """Rerank the candidates based on the user query with an external model/module."""
+
+    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
+    TEXT_FIELD_NAME = os.environ.get("TEXT_FIELD_NAME", "text")
+
     # Create the vector query
     vector_query = vector_query_filter(emb_model, user_query, num_results=num_results)
 
     # Create the full-text query
-    full_text_query = bm25_query_optional("text", user_query, num_results=num_results)
+    full_text_query = bm25_query_optional(
+        TEXT_FIELD_NAME, user_query, num_results=num_results
+    )
 
     # Run queries individually
     vector_query_results = index.query(vector_query)
@@ -32,7 +36,7 @@ def rerank(
     # Assemble list of potential candidates with their IDs
     candidate_map = {}
     for res in vector_query_results + full_text_query_results:
-        candidate = f"Id: {res['_id']}. Text: {res['text']}"
+        candidate = f"Id: {res[ID_FIELD_NAME]}. Text: {res[TEXT_FIELD_NAME]}"
         if candidate not in candidate_map:
             candidate_map[candidate] = res
 
@@ -46,7 +50,7 @@ def rerank(
 
     # Fetch full objects for the reranked results
     return [
-        (candidate_map[rr["content"]]["_id"], score)
+        (candidate_map[rr["content"]][ID_FIELD_NAME], score)
         for rr, score in zip(reranked, scores)
     ]
 
@@ -56,6 +60,12 @@ def make_score_dict_rerank(res):
 
 
 def gather_rerank_results(search_method_input: SearchMethodInput):
+    # lazy load the reranker
+    from redisvl.utils.rerank import HFCrossEncoderReranker
+
+    # Load the ms marco MiniLM cross encoder model from huggingface
+    reranker = HFCrossEncoderReranker("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
     redis_res_rerank = {}
 
     for key in search_method_input.raw_queries:
@@ -64,6 +74,7 @@ def gather_rerank_results(search_method_input: SearchMethodInput):
             start = time.time()
             rerank_res = rerank(
                 search_method_input.index,
+                reranker,
                 search_method_input.emb_model,
                 text_query,
                 num_results=10,
@@ -72,9 +83,9 @@ def gather_rerank_results(search_method_input: SearchMethodInput):
             search_method_input.query_metrics.query_times.append(query_time)
 
             scores_dict = make_score_dict_rerank(rerank_res)
-        except:
-            print(f"failed for {key}, {text_query}")
-            scores_dict = {}
+        except Exception as e:
+            print(f"failed for {key}, {text_query}, error: {e}")
+            scores_dict = {"no_match": 0}
 
         redis_res_rerank[key] = scores_dict
 

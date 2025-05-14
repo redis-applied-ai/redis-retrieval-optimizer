@@ -29,7 +29,10 @@ def test_run_bayes_study(redis_url):
         corpus_processor=eval_beir.process_corpus,
     )
 
-    assert metrics.shape[0] == study_config["optimization_settings"]["num_trials"]
+    assert metrics.shape[0] == study_config["optimization_settings"]["n_trials"]
+
+    for score in metrics["f1@k"].tolist():
+        assert score > 0.0
 
     last_schema = utils.get_last_index_settings(redis_url)
     assert last_schema is not None
@@ -39,4 +42,5 @@ def test_run_bayes_study(redis_url):
     assert index.info()["num_docs"] == 5
 
     # clean up
+    index.client.json().delete("ret-opt:last_schema")
     index.delete(drop=True)

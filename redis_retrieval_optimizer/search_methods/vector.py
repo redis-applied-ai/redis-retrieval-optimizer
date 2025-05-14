@@ -1,3 +1,5 @@
+import os
+
 from ranx import Run
 from redisvl.query import VectorQuery
 
@@ -7,22 +9,32 @@ from redis_retrieval_optimizer.search_methods.base import run_search_w_time
 
 def vector_query(query: str, num_results: int, emb_model) -> VectorQuery:
     vector = emb_model.embed(query, as_buffer=True)
+    VECTOR_FIELD_NAME = os.environ.get("VECTOR_FIELD_NAME", "vector")
+    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
+    TEXT_FIELD_NAME = os.environ.get("TEXT_FIELD_NAME", "text")
 
     return VectorQuery(
         vector=vector,
-        vector_field_name="vector",
+        vector_field_name=VECTOR_FIELD_NAME,
         num_results=num_results,
-        return_fields=["_id", "text", "title"],  # update to read from env maybe?
+        return_fields=[
+            ID_FIELD_NAME,
+            TEXT_FIELD_NAME,
+        ],
     )
 
 
 def make_score_dict_vec(res):
+    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
+
     scores_dict = {}
+    if not res:
+        return {"no_match": 0}
     for rec in res:
-        if "_id" in rec:
-            scores_dict[rec["_id"]] = 2 - float(rec["vector_distance"]) / 2
+        if ID_FIELD_NAME in rec:
+            scores_dict[rec[ID_FIELD_NAME]] = 2 - float(rec["vector_distance"]) / 2
         else:
-            scores_dict["no_match"] = 1
+            scores_dict["no_match"] = 0
 
     return scores_dict
 

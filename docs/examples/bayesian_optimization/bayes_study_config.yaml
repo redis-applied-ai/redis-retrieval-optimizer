@@ -30,7 +30,7 @@ optimization_settings:
   m: [8, 16, 64]
 
 
-search_methods: ["vector", "lin_combo"]
+search_methods: ["vector", "hybrid"]
 embedding_models:
   - type: "hf"
     model: "sentence-transformers/all-MiniLM-L6-v2"

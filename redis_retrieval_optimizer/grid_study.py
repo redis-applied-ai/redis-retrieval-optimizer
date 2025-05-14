@@ -1,3 +1,4 @@
+import os
 from typing import Callable
 
 import pandas as pd
@@ -78,9 +79,8 @@ def init_index_from_grid_settings(
             grid_study_config.index_settings,
         )
 
-        if recreate_index:
-            index = SearchIndex.from_dict(schema, redis_url=redis_url)
-            index.create(overwrite=True, drop=recreate_data)
+        index = SearchIndex.from_dict(schema, redis_url=redis_url)
+        index.create(overwrite=recreate_index, drop=recreate_data)
 
         if recreate_data:
             emb_model = utils.get_embedding_model(
@@ -93,6 +93,7 @@ def init_index_from_grid_settings(
 
             index.load(corpus_data)
 
+        index_settings["embedding"] = embed_settings.model_dump()
         utils.set_last_index_settings(redis_url, index_settings)
 
     return index

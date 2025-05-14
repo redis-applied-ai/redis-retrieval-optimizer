@@ -5,8 +5,6 @@ qrels: "data/nfcorpus_qrels.json"
 
 index_settings:
   name: "optimize"
-  vector_field_name: "vector" # name of the vector field to search on
-  text_field_name: "text" # name of the text field for lexical search
   from_existing: false
   vector_dim: 384 # should match first embedding model or from_existing
   additional_fields:

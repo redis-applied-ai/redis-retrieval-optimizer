@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Any, Dict, List
 
@@ -5,7 +6,7 @@ from ranx import Run
 
 from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.bm25 import bm25_query_optional
-from redis_retrieval_optimizer.search_methods.lin_combo import vector_query_filter
+from redis_retrieval_optimizer.search_methods.hybrid import vector_query_filter
 
 
 def fuse_rankings_rrf(*ranked_lists, weights=None, k=60):
@@ -41,19 +42,21 @@ def weighted_rrf(
     k: int = 60,
 ) -> List[Dict[str, Any]]:
     """Implemented client-side RRF after querying from Redis."""
+
+    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
     # Create the vector query
-    vector_query = vector_query_filter(emb_model, user_query, num_results=10)
+    vector_query = vector_query_filter(emb_model, user_query, num_results=k)
 
     # Create the full-text bm25 query
-    full_text_query = bm25_query_optional("text", user_query, num_results=10)
+    full_text_query = bm25_query_optional("text", user_query, num_results=k)
 
     # Run queries individually
     vector_query_results = index.query(vector_query)
     full_text_query_results = index.query(full_text_query)
 
     # Extract _id from results
-    vector_ids = [res["_id"] for res in vector_query_results]
-    full_text_ids = [res["_id"] for res in full_text_query_results]
+    vector_ids = [res[ID_FIELD_NAME] for res in vector_query_results]
+    full_text_ids = [res[ID_FIELD_NAME] for res in full_text_query_results]
 
     # Perform weighted RRF
     return fuse_rankings_rrf(
@@ -82,9 +85,9 @@ def gather_weighted_rrf(search_method_input: SearchMethodInput) -> SearchMethodO
             query_time = time.time() - start
             search_method_input.query_metrics.query_times.append(query_time)
             scores_dict = make_score_dict_w_rff(w_rff)
-        except:
-            print(f"failed for {key}, {text_query}")
-            scores_dict = {}
+        except Exception as e:
+            print(f"failed for {key}, {text_query}, error: {e}")
+            scores_dict = {"no_match": 0}
 
         redis_res_w_rrf[key] = scores_dict
 

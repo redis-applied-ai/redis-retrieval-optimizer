@@ -33,6 +33,9 @@ def test_run_grid_study(redis_url):
         study_config["embedding_models"]
     )
 
+    for score in metrics["f1@k"].tolist():
+        assert score > 0.0
+
     last_schema = utils.get_last_index_settings(redis_url)
     assert last_schema is not None
 
@@ -41,4 +44,5 @@ def test_run_grid_study(redis_url):
     assert index.info()["num_docs"] == 5
 
     # clean up
+    index.client.json().delete("ret-opt:last_schema")
     index.delete(drop=True)

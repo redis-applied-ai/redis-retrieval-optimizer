@@ -52,12 +52,12 @@ class DataSettings(BaseModel):
 class IndexSettings(BaseModel):
     name: str = "ret-opt"
     prefix: str = "ret-opt"
-    id_field_name: str = "_id"
-    text_field_name: str = "text"
-    vector_field_name: str = "vector"
     from_existing: bool = False
     vector_dim: int
     algorithm: str = "flat"
+    vector_field_name: str = "vector"
+    id_field_name: str = "_id"
+    text_field_name: str = "text"
     distance_metric: str = "cosine"
     vector_data_type: str = "float32"
     ef_construction: int = 0

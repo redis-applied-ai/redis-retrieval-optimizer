@@ -40,8 +40,6 @@ qrels: "data/nfcorpus_qrels.json"
 # vector field names
 index_settings:
   name: "optimize"
-  vector_field_name: "vector" # name of the vector field to search on
-  text_field_name: "text" # name of the text field for lexical search
   from_existing: false
   additional_fields:
     - name: "title"
@@ -56,7 +54,7 @@ embedding_models: # embedding cache would be awesome here.
     dim: 384
     embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
 
-search_methods: ["bm25", "vector", "lin_combo", "rerank", "weighted_rrf"] # must match what is passed in search_method_map
+search_methods: ["bm25", "vector", "hybrid", "rerank", "weighted_rrf"] # must match what is passed in search_method_map
 ```
 
 Code
@@ -93,8 +91,6 @@ qrels: "data/nfcorpus_qrels.json"
 
 index_settings:
   name: "optimize"
-  vector_field_name: "vector" # name of the vector field to search on
-  text_field_name: "text" # name of the text field for lexical search
   from_existing: false
   vector_dim: 384 # should match first embedding model or from_existing
   additional_fields:
@@ -118,7 +114,7 @@ optimization_settings:
   m: [8, 16, 64]
 
 
-search_methods: ["vector", "lin_combo"]
+search_methods: ["vector", "hybrid"]
 embedding_models:
   - type: "hf"
     model: "sentence-transformers/all-MiniLM-L6-v2"

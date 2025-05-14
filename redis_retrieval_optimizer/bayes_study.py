@@ -106,7 +106,7 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
     )
 
     if recreate_data:
-        print("Recreating index...")
+        logging.info("Recreating index...")
         corpus = utils.load_json(study_config.corpus)
         corpus_data = corpus_processor(corpus, emb_model)
         corpus_size = len(corpus_data)
@@ -114,9 +114,6 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
 
         # reload data
         trial_index.load(corpus_data)
-    else:
-        corpus_size = trial_index.info()["num_docs"]
-        print("Skip recreate")
 
     while float(trial_index.info()["percent_indexed"]) < 1:
         time.sleep(1)
@@ -132,10 +129,6 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
 
     if num_docs == 0:
         raise ValueError("No documents indexed, check corpus and index settings")
-    elif num_docs != corpus_size:
-        print(
-            f"\n\n WARNING {num_docs=} != {corpus_size=}... Settings {recreate_index=}, {recreate_data=}"
-        )
 
     # save config since it loaded
     index_settings["embedding"] = trial_settings.embedding.model_dump()
@@ -200,10 +193,10 @@ def run_bayes_study(
         n_jobs=study_config.optimization_settings.n_jobs,
     )
 
-    print(f"Completed Bayesian optimization... \n\n")
+    logging.info(f"Completed Bayesian optimization... \n\n")
 
     best_trial = study.best_trial
-    print(f"Best Configuration: {best_trial.number}: {best_trial.params}:\n\n")
-    print(f"Best Score: {best_trial.values}\n\n")
+    logging.info(f"Best Configuration: {best_trial.number}: {best_trial.params}:\n\n")
+    logging.info(f"Best Score: {best_trial.values}\n\n")
 
     return pd.DataFrame(METRICS)
