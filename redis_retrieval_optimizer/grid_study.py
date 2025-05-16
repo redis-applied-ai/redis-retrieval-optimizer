@@ -1,4 +1,6 @@
+import logging
 import os
+import time
 from typing import Callable
 
 import pandas as pd
@@ -93,6 +95,10 @@ def init_index_from_grid_settings(
 
             index.load(corpus_data)
 
+            while float(index.info()["percent_indexed"]) < 1:
+                time.sleep(1)
+                logging.info(f"Indexing progress: {index.info()['percent_indexed']}")
+
         index_settings["embedding"] = embed_settings.model_dump()
         utils.set_last_index_settings(redis_url, index_settings)
 
@@ -138,8 +144,19 @@ def run_grid_study(
         if i > 0:
             # assuming that you didn't pass the same embedding model twice like a fool
             print("Recreating index with new embedding model")
-            index_settings = grid_study_config.index_settings.model_dump()
-            index_settings["embedding"] = embedding_model.model_dump()
+
+            # delete old index and data with embedding cache it's not expensive to recreate
+            # consider potential of pre-fixing studies with study_id for separation
+            index_settings = grid_study_config.index_settings
+
+            # assign new vector info to index_settings
+            index_settings.vector_data_type = embedding_model.dtype
+            index_settings.vector_dim = embedding_model.dim
+
+            schema = utils.schema_from_settings(index_settings)
+            index = utils.index_from_schema(
+                schema, redis_url, recreate_index=True, recreate_data=True
+            )
 
             # TODO: be able to dump existing index corpus to file automatically which shouldn't be too hard
             print(
@@ -148,9 +165,14 @@ def run_grid_study(
             print("Recreating: loading corpus from file")
             emb_model = utils.get_embedding_model(embedding_model, redis_url)
             corpus = utils.load_json(grid_study_config.corpus)
+
             # corpus processing functions should be user defined
             corpus_data = corpus_processor(corpus, emb_model)
             index.load(corpus_data)
+
+            while float(index.info()["percent_indexed"]) < 1:
+                time.sleep(1)
+                logging.info(f"Indexing progress: {index.info()['percent_indexed']}")
 
         # check if matches with last index settings
         emb_model = utils.get_embedding_model(embedding_model, redis_url)

@@ -1,0 +1,35 @@
+# paths to necessary data files
+corpus: "../../../data/nfcorpus_corpus.json" # optional if from_existing
+queries: "../../../data/nfcorpus_queries.json"
+qrels: "../../../data/nfcorpus_qrels.json"
+
+# vector field names
+index_settings:
+  name: "optimize"
+  vector_field_name: "vector" # name of the vector field to search on
+  text_field_name: "text" # name of the text field for lexical search
+  from_existing: false
+  additional_fields:
+    - name: "title"
+      type: "text"
+  vector_dim: 1536 # should match first embedding model or from_existing
+
+# will run all search methods for each embedding model and then iterate
+embedding_models: # embedding cache would be awesome here.
+# if from_existing is true, first record is assumed to be the one used to create the index
+  - type: "openai"
+    model: "text-embedding-3-small"
+    dim: 1536
+    embedding_cache_name: "openai-small-vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
+
+  - type: "hf"
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    dim: 384
+    embedding_cache_name: "hf-minilm-vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
+
+  - type: "hf"
+    model: "sentence-transformers/all-mpnet-base-v2"
+    dim: 768
+    embedding_cache_name: "hf-mpnet-vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
+
+search_methods: ["bm25", "vector", "hybrid", "rerank", "weighted_rrf"] # must match what is passed in search_method_map

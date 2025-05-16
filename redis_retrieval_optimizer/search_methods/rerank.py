@@ -56,6 +56,8 @@ def rerank(
 
 
 def make_score_dict_rerank(res):
+    if not res:
+        return {"no_match": 0}
     return {rec[0]: rec[1] for rec in res}
 
 
