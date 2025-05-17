@@ -15,7 +15,7 @@ The **Retrieval Optimizer** from Redis is designed to bring focus back to what m
 
 Beyond accuracy alone, it also supports evaluating critical tradeoffs between **cost, speed, and latency**, helping you understand how different embedding models, retrieval strategies, and index configurations impact overall system performance. The ultimate goal is to enable **metrics-driven development** for your search application—ensuring that decisions are grounded in data, not assumptions.
 
-# Getting Started
+# Quick Start
 
 The Retrieval Optimizer supports two *study* types: **Grid** and **Bayesian Optimization**. Each is suited to a different stage of building a high-quality search system.
 
@@ -28,9 +28,9 @@ Use a grid study to explore the impact of different **embedding models** and **r
 Once you've identified a solid starting point, use Bayesian optimization to **fine-tune your index configuration**. It intelligently selects the most promising combinations to try—saving time compared to exhaustive testing. This mode is especially useful for balancing **cost, speed, and latency** as you work toward a production-ready solution.
 
 
-## Quick start: grid study
+## Running a Grid study
 
-Define study config
+#### Define study config
 ```yaml
 # paths to necessary data files
 corpus: "data/nfcorpus_corpus.json" # optional if from_existing
@@ -57,7 +57,7 @@ embedding_models: # embedding cache would be awesome here.
 search_methods: ["bm25", "vector", "hybrid", "rerank", "weighted_rrf"] # must match what is passed in search_method_map
 ```
 
-Code
+#### Code
 ```python
 import os
 from redis_retrieval_optimizer.grid_study import run_grid_study
@@ -76,13 +76,13 @@ metrics = run_grid_study(
 )
 ```
 
-Example output
+#### Example output
 ![grid study output](/reference/grid_output.png)
 
-## Quick start: bayesian optimization
+## Running a bayesian optimization
 Selects the next best configuration to try based on a heuristic. This is good when it would take a very long time to test all possible configurations.
 
-Study config:
+#### Study config:
 ```yaml
 # path to data files for easy read
 corpus: "data/nfcorpus_corpus.json"
@@ -123,6 +123,7 @@ embedding_models:
     dtype: "float32"
 ```
 
+#### Code
 ```python
 import os
 from redis_retrieval_optimizer.bayes_study import run_bayes_study
@@ -141,8 +142,45 @@ metrics = run_bayes_study(
 )
 ```
 
-Example output
+#### Example output
 ![bayes study output](/reference/bayes_output.png)
+
+
+# Search Methods
+
+Below is a comprehensive table documenting the built-in search methods available in the Redis Retrieval Optimizer:
+
+| Method | Description | Use Case | Key Features |
+|--------|-------------|----------|--------------|
+| bm25 | Traditional lexical search using BM25 algorithm | Text-based search where keywords and exact matches matter | <ul><li>No embeddings required</li><li>Good for keyword-heavy queries</li><li>Fast for direct text matches</li><li>Handles stopwords filtering</li></ul> |
+| vector | Pure vector/semantic search | Finding semantically similar content regardless of keyword overlap | <ul><li>Uses embedding model to convert text to vectors</li><li>Captures semantic meaning beyond keywords</li><li>Distance scoring (cosine, dot product, etc.)</li></ul> |
+| hybrid | Combined lexical and semantic search | Balancing keyword precision with semantic understanding | <ul><li>Combines BM25 and vector search</li><li>Better recall than either method alone</li><li>Handles both exact matches and semantic similarity</li></ul> |
+| rerank | Two-stage retrieval with cross-encoder reranking | When high precision is crucial and latency is less important | <ul><li>First-stage retrieval with BM25/vector</li><li>Second-stage reranking with cross-encoder</li><li>Uses HuggingFace cross-encoder model</li><li>Higher quality but increased latency</li></ul> |
+| weighted_rrf | Reciprocal Rank Fusion with weights | Combining multiple search strategies with controlled blending | <ul><li>Fuses BM25 and vector search results</li><li>Configurable weighting between methods</li><li>Handles cases where methods have complementary strengths</li><li>Parameter k controls how quickly rankings decay</li></ul> |
+
+### Implementation Details
+
+- All search methods follow a common interface taking a SearchMethodInput and returning a SearchMethodOutput
+- Query times are automatically tracked in the query_metrics object
+- Each method handles error cases gracefully, returning empty results rather than failing
+- Results are returned as a `ranx.Run` object for consistent evaluation
+
+### Extending with Custom Methods
+
+You can create custom search methods by implementing a function that:
+
+1. Takes a SearchMethodInput object
+2. Returns a SearchMethodOutput object with results and timing metrics
+
+Then register your method in a custom search method map:
+
+```python
+CUSTOM_SEARCH_METHOD_MAP = {
+    "bm25": gather_bm25_results,
+    "vector": gather_vector_results,
+    "my_custom_method": gather_my_custom_results
+}
+```
 
 ## Custom Processors and Search Methods
 
@@ -158,6 +196,7 @@ Every search application is unique. You might store metadata differently, rely o
 
 This example defines a study where we compare two vector-based methods—one using a simple vector query, and another that filters by metadata before vector search.
 
+#### Study config
 ```yaml
 corpus: "data/car_corpus.json"
 queries: "data/car_queries.json"
@@ -191,6 +230,7 @@ search_methods: ["basic_vector", "pre_filter_vector"]
 
 Search methods can be anything you want—as long as they accept a `SearchMethodInput` and return a `SearchMethodOutput`. This allows you to test new retrieval strategies, add filters, or layer on post-processing logic.
 
+#### code
 ```python
 def gather_vector_results(search_method_input: SearchMethodInput) -> SearchMethodOutput:
     redis_res_vector = {}
