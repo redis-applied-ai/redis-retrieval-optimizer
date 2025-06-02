@@ -212,7 +212,7 @@ def bm25_query_optional(
     text_field: str, user_query: str, num_results: int, scorer="BM25STD"
 ) -> FilterQuery:
     """Generate a Redis full-text query given a user query string."""
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
+    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id") #TODO don't read from env here, pass as parameter
     return (
         FilterQuery(
             filter_expression=f"~({Text(text_field) % tokenize_and_escape_query(user_query)})",
@@ -225,16 +225,14 @@ def bm25_query_optional(
     )
 
 
-def make_score_dict_bm25(res):
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
-
+def make_score_dict_bm25(res, id_field_name) -> dict:
     scores_dict = {}
     if not res:
         return {"no_match": 0}
 
     for rec in res:
-        if ID_FIELD_NAME in rec:
-            scores_dict[rec[ID_FIELD_NAME]] = rec["score"]
+        if id_field_name in rec:
+            scores_dict[rec[id_field_name]] = rec["score"]
         else:
             scores_dict["no_match"] = 0
 
@@ -247,14 +245,14 @@ def gather_bm25_results(search_method_input: SearchMethodInput) -> SearchMethodO
     for key in search_method_input.raw_queries:
         text_query = search_method_input.raw_queries[key]
         full_text_query = TextQuery(text=text_query,
-                                    text_field_name=os.environ.get("TEXT_FIELD_NAME", "text"),
+                                    text_field_name=search_method_input.text_field_name,
                                     num_results=10, #TODO make this configurable
                                     text_scorer="BM25STD")
         try:
             res = run_search_w_time(
                 search_method_input.index, full_text_query, search_method_input.query_metrics
             )
-            score_dict = make_score_dict_bm25(res)
+            score_dict = make_score_dict_bm25(res, id_field_name=search_method_input.id_field_name)
         except Exception as e:
             print(f"failed for {key}, {text_query}: error: {e}")
             score_dict = {}

@@ -23,30 +23,34 @@ def vector_query_filter(
 
     return query
 
-
-def gen_hybrid_query(emb_model, user_query: str, num_results: int) -> HybridQuery:
+# TODO is this needed as a separate function?
+def hybrid_query(
+    emb_model,
+    user_query: str,
+    num_results: int,
+    vector_field_name: str = "vector",
+    text_field_name: str = "text",
+    id_field_name: str = "_id",
+    ) -> HybridQuery:
     """Generate a Redis vector query given user query string."""
-    VECTOR_FIELD_NAME = os.environ.get("VECTOR_FIELD_NAME", "vector")
-    TEXT_FIELD_NAME = os.environ.get("TEXT_FIELD_NAME", "text")
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
 
     vector = emb_model.embed(user_query, as_buffer=True, dtype="float32")
 
     query = HybridQuery(
         text=user_query,
-        text_field_name=TEXT_FIELD_NAME,
+        text_field_name=text_field_name,
         vector=vector,
-        vector_field_name=VECTOR_FIELD_NAME,
-        alpha=0.7,
+        vector_field_name=vector_field_name,
+        alpha=0.7, # TODO make this configurable
         num_results=num_results,
-        return_fields=[ID_FIELD_NAME, TEXT_FIELD_NAME],
+        return_fields=[id_field_name, text_field_name],
     )
 
     return query
 
 
 def hybrid_scores_dict(res):
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
+    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id") #TODO don't read from env here, pass as parameter
     if res:
         scores_dict = {}
 
@@ -68,8 +72,13 @@ def gather_hybrid_results(
     for key in search_method_input.raw_queries:
         text_query = search_method_input.raw_queries[key]
         try:
-            hybrid_query = gen_hybrid_query(
-                search_method_input.emb_model, text_query, 10
+            hybrid_query = hybrid_query(
+                            emb_model=search_method_input.emb_model,
+                            user_query=text_query,
+                            num_results=10, # TODO make this configurable
+                            vector_field_name=search_method_input.vector_field_name,
+                            text_field_name=search_method_input.text_field_name,
+                            id_field_name=search_method_input.id_field_name,
             )
             res = run_search_w_time(
                 search_method_input.index,
