@@ -15,18 +15,17 @@ def rerank(
     emb_model,
     user_query: str,
     num_results: int = 20,
+    text_field_name: str = "text",
+    id_field_name: str = "_id",
 ) -> List[Dict[str, Any]]:
     """Rerank the candidates based on the user query with an external model/module."""
-
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
-    TEXT_FIELD_NAME = os.environ.get("TEXT_FIELD_NAME", "text")
 
     # Create the vector query
     vector_query = vector_query_filter(emb_model, user_query, num_results=num_results)
 
     # Create the full-text query
     full_text_query = bm25_query_optional(
-        TEXT_FIELD_NAME, user_query, num_results=num_results
+        text_field_name, id_field_name, user_query, num_results=num_results
     )
 
     # Run queries individually
@@ -36,7 +35,7 @@ def rerank(
     # Assemble list of potential candidates with their IDs
     candidate_map = {}
     for res in vector_query_results + full_text_query_results:
-        candidate = f"Id: {res[ID_FIELD_NAME]}. Text: {res[TEXT_FIELD_NAME]}"
+        candidate = f"Id: {res[id_field_name]}. Text: {res[text_field_name]}"
         if candidate not in candidate_map:
             candidate_map[candidate] = res
 
@@ -50,7 +49,7 @@ def rerank(
 
     # Fetch full objects for the reranked results
     return [
-        (candidate_map[rr["content"]][ID_FIELD_NAME], score)
+        (candidate_map[rr["content"]][id_field_name], score)
         for rr, score in zip(reranked, scores)
     ]
 
@@ -79,7 +78,9 @@ def gather_rerank_results(search_method_input: SearchMethodInput):
                 reranker,
                 search_method_input.emb_model,
                 text_query,
-                num_results=10,
+                num_results=10, # TODO make this configurable
+                text_field_name=search_method_input.text_field_name,
+                id_field_name=search_method_input.id_field_name,
             )
             query_time = time.time() - start
             search_method_input.query_metrics.query_times.append(query_time)

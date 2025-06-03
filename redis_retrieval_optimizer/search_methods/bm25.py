@@ -209,15 +209,14 @@ def tokenize_and_escape_query(user_query: str) -> str:
 
 
 def bm25_query_optional(
-    text_field: str, user_query: str, num_results: int, scorer="BM25STD"
+    text_field_name: str, id_field_name: str, user_query: str, num_results: int, scorer="BM25STD"
 ) -> FilterQuery:
     """Generate a Redis full-text query given a user query string."""
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id") #TODO don't read from env here, pass as parameter
     return (
         FilterQuery(
-            filter_expression=f"~({Text(text_field) % tokenize_and_escape_query(user_query)})",
+            filter_expression=f"~({Text(text_field_name) % tokenize_and_escape_query(user_query)})",
             num_results=num_results,
-            return_fields=[ID_FIELD_NAME, text_field],
+            return_fields=[id_field_name, text_field_name],
             dialect=2,
         )
         .scorer(scorer)

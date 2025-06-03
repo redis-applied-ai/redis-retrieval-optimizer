@@ -24,7 +24,7 @@ def vector_query_filter(
     return query
 
 # TODO is this needed as a separate function?
-def hybrid_query(
+def gen_hybrid_query(
     emb_model,
     user_query: str,
     num_results: int,
@@ -49,14 +49,13 @@ def hybrid_query(
     return query
 
 
-def hybrid_scores_dict(res):
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id") #TODO don't read from env here, pass as parameter
+def hybrid_scores_dict(res, id_field_name: str) -> dict:
     if res:
         scores_dict = {}
 
         for rec in res:
-            if ID_FIELD_NAME in rec:
-                scores_dict[rec[ID_FIELD_NAME]] = float(rec["hybrid_score"])
+            if id_field_name in rec:
+                scores_dict[rec[id_field_name]] = float(rec["hybrid_score"])
             else:
                 scores_dict["no_match"] = 1
         return scores_dict
@@ -72,7 +71,7 @@ def gather_hybrid_results(
     for key in search_method_input.raw_queries:
         text_query = search_method_input.raw_queries[key]
         try:
-            hybrid_query = hybrid_query(
+            hybrid_query = gen_hybrid_query(
                             emb_model=search_method_input.emb_model,
                             user_query=text_query,
                             num_results=10, # TODO make this configurable
@@ -85,7 +84,7 @@ def gather_hybrid_results(
                 hybrid_query,
                 search_method_input.query_metrics,
             )
-            score_dict = hybrid_scores_dict(res)
+            score_dict = hybrid_scores_dict(res, search_method_input.id_field_name)
         except Exception as e:
             print(f"failed for {key}, {text_query}")
             score_dict = {"no_match": 0}

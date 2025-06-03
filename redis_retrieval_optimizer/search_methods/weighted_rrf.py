@@ -40,23 +40,23 @@ def weighted_rrf(
     alpha: float = 0.5,
     num_results: int = 4,
     k: int = 60,
+    id_field_name: str = "_id",
 ) -> List[Dict[str, Any]]:
     """Implemented client-side RRF after querying from Redis."""
 
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
     # Create the vector query
     vector_query = vector_query_filter(emb_model, user_query, num_results=k)
 
     # Create the full-text bm25 query
-    full_text_query = bm25_query_optional("text", user_query, num_results=k)
+    full_text_query = bm25_query_optional("text", id_field_name, user_query, num_results=k)
 
     # Run queries individually
     vector_query_results = index.query(vector_query)
     full_text_query_results = index.query(full_text_query)
 
     # Extract _id from results
-    vector_ids = [res[ID_FIELD_NAME] for res in vector_query_results]
-    full_text_ids = [res[ID_FIELD_NAME] for res in full_text_query_results]
+    vector_ids = [res[id_field_name] for res in vector_query_results]
+    full_text_ids = [res[id_field_name] for res in full_text_query_results]
 
     # Perform weighted RRF
     return fuse_rankings_rrf(
@@ -79,8 +79,9 @@ def gather_weighted_rrf(search_method_input: SearchMethodInput) -> SearchMethodO
                 search_method_input.index,
                 search_method_input.emb_model,
                 text_query,
-                num_results=10,
-                k=20,
+                num_results=10, # TODO make this configurable
+                k=20, # TODO make this configurable
+                id_field_name=search_method_input.id_field_name,
             )
             query_time = time.time() - start
             search_method_input.query_metrics.query_times.append(query_time)

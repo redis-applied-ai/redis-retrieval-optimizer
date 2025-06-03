@@ -28,15 +28,13 @@ def vector_query(
     )
 
 
-def make_score_dict_vec(res):
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
-
+def make_score_dict_vec(res, id_field_name: str) -> dict:
     scores_dict = {}
     if not res:
         return {"no_match": 0}
     for rec in res:
-        if ID_FIELD_NAME in rec:
-            scores_dict[rec[ID_FIELD_NAME]] = 2 - float(rec["vector_distance"]) / 2
+        if id_field_name in rec:
+            scores_dict[rec[id_field_name]] = 2 - float(rec["vector_distance"]) / 2
         else:
             scores_dict["no_match"] = 0
 
@@ -62,7 +60,7 @@ def gather_vector_results(
             search_method_input.index, vec_query, search_method_input.query_metrics
         )
 
-        score_dict = make_score_dict_vec(res)
+        score_dict = make_score_dict_vec(res, search_method_input.id_field_name)
         redis_res_vector[key] = score_dict
 
     return SearchMethodOutput(

@@ -166,7 +166,7 @@ def test_make_score_dict_vec():
         {"_id": "doc2", "vector_distance": 0.5},
     ]
 
-    scores = make_score_dict_vec(results)
+    scores = make_score_dict_vec(results, "_id")
 
     # Verify scores are calculated correctly
     assert "doc1" in scores
@@ -176,7 +176,7 @@ def test_make_score_dict_vec():
     assert scores["doc2"] == 2 - 0.5 / 2
 
     # Test with empty results
-    empty_scores = make_score_dict_vec([])
+    empty_scores = make_score_dict_vec([], "_id")
     assert "no_match" in empty_scores
     assert empty_scores["no_match"] == 0
 
