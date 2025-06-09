@@ -16,6 +16,9 @@ class SearchMethodInput(BaseModel):
     index: Any
     query_metrics: QueryMetrics = QueryMetrics()
     emb_model: BaseVectorizer = None
+    id_field_name: str = "_id"
+    text_field_name: str = "text"
+    vector_field_name: str = "vector"
     kwargs: dict = {}
 
     @field_validator("index")

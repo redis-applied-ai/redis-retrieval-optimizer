@@ -145,6 +145,8 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
         index=trial_index,
         raw_queries=queries,
         emb_model=emb_model,
+        vector_field_name=index_settings["vector_field_name"],
+        text_field_name=index_settings["text_field_name"],
     )
 
     search_method_output = search_fn(search_input)

@@ -1,7 +1,7 @@
 import os
 
 from ranx import Run
-from redisvl.query import FilterQuery
+from redisvl.query import FilterQuery, TextQuery, HybridQuery
 from redisvl.query.filter import Text
 from redisvl.utils.token_escaper import TokenEscaper
 
@@ -208,33 +208,15 @@ def tokenize_and_escape_query(user_query: str) -> str:
     )
 
 
-# TODO: update with the redisvl version
-def bm25_query(
-    text_field: str, user_query: str, num_results: int, scorer="BM25STD"
-) -> FilterQuery:
-    """Generate a Redis full-text query given a user query string."""
-    return (
-        FilterQuery(
-            filter_expression=f"({Text(text_field) % tokenize_and_escape_query(user_query)})",
-            num_results=num_results,
-            return_fields=["_id", "text", "title"],
-            dialect=2,
-        )
-        .scorer(scorer)
-        .with_scores()
-    )
-
-
 def bm25_query_optional(
-    text_field: str, user_query: str, num_results: int, scorer="BM25STD"
+    text_field_name: str, id_field_name: str, user_query: str, num_results: int, scorer="BM25STD"
 ) -> FilterQuery:
     """Generate a Redis full-text query given a user query string."""
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
     return (
         FilterQuery(
-            filter_expression=f"~({Text(text_field) % tokenize_and_escape_query(user_query)})",
+            filter_expression=f"~({Text(text_field_name) % tokenize_and_escape_query(user_query)})",
             num_results=num_results,
-            return_fields=[ID_FIELD_NAME, text_field],
+            return_fields=[id_field_name, text_field_name],
             dialect=2,
         )
         .scorer(scorer)
@@ -242,16 +224,14 @@ def bm25_query_optional(
     )
 
 
-def make_score_dict_bm25(res):
-    ID_FIELD_NAME = os.environ.get("ID_FIELD_NAME", "_id")
-
+def make_score_dict_bm25(res, id_field_name) -> dict:
     scores_dict = {}
     if not res:
         return {"no_match": 0}
 
     for rec in res:
-        if ID_FIELD_NAME in rec:
-            scores_dict[rec[ID_FIELD_NAME]] = rec["score"]
+        if id_field_name in rec:
+            scores_dict[rec[id_field_name]] = rec["score"]
         else:
             scores_dict["no_match"] = 0
 
@@ -263,12 +243,15 @@ def gather_bm25_results(search_method_input: SearchMethodInput) -> SearchMethodO
 
     for key in search_method_input.raw_queries:
         text_query = search_method_input.raw_queries[key]
-        ft_query = bm25_query(os.environ.get("TEXT_FIELD_NAME", "text"), text_query, 10)
+        full_text_query = TextQuery(text=text_query,
+                                    text_field_name=search_method_input.text_field_name,
+                                    num_results=10, #TODO make this configurable
+                                    text_scorer="BM25STD")
         try:
             res = run_search_w_time(
-                search_method_input.index, ft_query, search_method_input.query_metrics
+                search_method_input.index, full_text_query, search_method_input.query_metrics
             )
-            score_dict = make_score_dict_bm25(res)
+            score_dict = make_score_dict_bm25(res, id_field_name=search_method_input.id_field_name)
         except Exception as e:
             print(f"failed for {key}, {text_query}: error: {e}")
             score_dict = {}
