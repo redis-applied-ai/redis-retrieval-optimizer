@@ -21,9 +21,9 @@ For complete code examples see the following notebooks:
 
 | Topic | Notebook |
 | ------ | ------- |
-| Basic grid study | [00_grid_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/dfc36382efd7e5e06903482a8a23a32bc047f1e9/docs/examples/grid_study/00_grid_study.ipynb) |
-| Custom grid study | [01_custom_grid_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/dfc36382efd7e5e06903482a8a23a32bc047f1e9/docs/examples/grid_study/01_custom_grid_study.ipynb) |
-| Bayesian Optimization | [00_bayes_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/dfc36382efd7e5e06903482a8a23a32bc047f1e9/docs/examples/bayesian_optimization/00_bayes_study.ipynb) |
+| Basic grid study | [00_grid_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/grid_study/00_grid_study.ipynb) |
+| Custom grid study | [01_custom_grid_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/grid_study/01_custom_grid_study.ipynb) |
+| Bayesian Optimization | [00_bayes_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/bayesian_optimization/00_bayes_study.ipynb) |
 | Embedding model comparison | [00_comparison.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/comparison/00_comparison.ipynb) |
 
 # Quick Start
