@@ -15,6 +15,17 @@ The **Retrieval Optimizer** from Redis is designed to bring focus back to what m
 
 Beyond accuracy alone, it also supports evaluating critical tradeoffs between **cost, speed, and latency**, helping you understand how different embedding models, retrieval strategies, and index configurations impact overall system performance. The ultimate goal is to enable **metrics-driven development** for your search application—ensuring that decisions are grounded in data, not assumptions.
 
+# Example notebooks
+
+For complete code examples see the following notebooks:
+
+| Topic | Notebook |
+| ------ | ------- |
+| Basic grid study | [00_grid_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/dfc36382efd7e5e06903482a8a23a32bc047f1e9/docs/examples/grid_study/00_grid_study.ipynb) |
+| Custom grid study | [01_custom_grid_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/dfc36382efd7e5e06903482a8a23a32bc047f1e9/docs/examples/grid_study/01_custom_grid_study.ipynb) |
+| Bayesian Optimization | [00_bayes_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/dfc36382efd7e5e06903482a8a23a32bc047f1e9/docs/examples/bayesian_optimization/00_bayes_study.ipynb) |
+| Embedding model comparison | [00_comparison.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/comparison/00_comparison.ipynb) |
+
 # Quick Start
 
 The Retrieval Optimizer supports two *study* types: **Grid** and **Bayesian Optimization**. Each is suited to a different stage of building a high-quality search system.
@@ -33,13 +44,15 @@ Once you've identified a solid starting point, use Bayesian optimization to **fi
 #### Define study config
 ```yaml
 # paths to necessary data files
-corpus: "data/nfcorpus_corpus.json" # optional if from_existing
+corpus: "data/nfcorpus_corpus.json"
 queries: "data/nfcorpus_queries.json"
 qrels: "data/nfcorpus_qrels.json"
 
 # vector field names
 index_settings:
   name: "optimize"
+  vector_field_name: "vector" # name of the vector field to search on
+  text_field_name: "text" # name of the text field for lexical search
   from_existing: false
   additional_fields:
     - name: "title"
@@ -77,7 +90,14 @@ metrics = run_grid_study(
 ```
 
 #### Example output
-![grid study output](/reference/grid_output.png)
+| search_method | model                                      | avg_query_time | recall@k | precision | ndcg@k   |
+|----------------|---------------------------------------------|----------------|-----------|-----------|----------|
+| weighted_rrf   | sentence-transformers/all-MiniLM-L6-v2     | 0.006608       | 0.156129  | 0.261056  | 0.204241 |
+| rerank         | sentence-transformers/all-MiniLM-L6-v2     | 0.127574       | 0.156039  | 0.260437  | 0.190298 |
+| lin_combo      | sentence-transformers/all-MiniLM-L6-v2     | 0.003678       | 0.119653  | 0.302993  | 0.173768 |
+| bm25           | sentence-transformers/all-MiniLM-L6-v2     | 0.000922       | 0.115798  | 0.323891  | 0.168909 |
+| vector         | sentence-transformers/all-MiniLM-L6-v2     | 0.003378       | 0.119653  | 0.302993  | 0.165573 |
+
 
 ## Running a bayesian optimization
 Selects the next best configuration to try based on a heuristic. This is good when it would take a very long time to test all possible configurations.
@@ -91,36 +111,41 @@ qrels: "data/nfcorpus_qrels.json"
 
 index_settings:
   name: "optimize"
+  vector_field_name: "vector" # name of the vector field to search on
+  text_field_name: "text" # name of the text field for lexical search
   from_existing: false
   vector_dim: 384 # should match first embedding model or from_existing
   additional_fields:
       - name: "title"
         type: "text"
 
+# section for bayesian optimization
 optimization_settings:
-  # defines the options optimization can take
+  # defines weight of each metric in optimization function
   metric_weights:
     f1_at_k: 1
-    embedding_latency: 1
     total_indexing_time: 1
-  algorithms: ["hnsw"]
-  vector_data_types: ["float16", "float32"]
-  distance_metrics: ["cosine"]
-  n_trials: 10
+  algorithms: ["hnsw"] # indexing algorithm to be included in the study
+  vector_data_types: ["float16", "float32"] # data types to be included in the study
+  distance_metrics: ["cosine"] # distance metrics to be included in the study
+  n_trials: 10 # total number of trials to run
   n_jobs: 1
   ret_k: [1, 10] # potential range of value to be sampled during study
-  ef_runtime: [10, 20, 30, 50]
-  ef_construction: [100, 150, 200, 250, 300]
-  m: [8, 16, 64]
+  ef_runtime: [10, 20, 30, 50] # potential values for ef_runtime to take
+  ef_construction: [100, 150, 200, 250, 300] # potential values for ef_construction to take
+  m: [8, 16, 64] # potential values for m to take
 
-
+# potential values for search method
 search_methods: ["vector", "hybrid"]
+
+# potential values for embedding models
 embedding_models:
   - type: "hf"
     model: "sentence-transformers/all-MiniLM-L6-v2"
     dim: 384
     embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
     dtype: "float32"
+
 ```
 
 #### Code
@@ -143,7 +168,29 @@ metrics = run_bayes_study(
 ```
 
 #### Example output
-![bayes study output](/reference/bayes_output.png)
+| search_method | algorithm | vector_data_type | ef_construction | ef_runtime | m  | avg_query_time | total_indexing_time | f1@k    |
+|---------------|-----------|------------------|------------------|------------|----|----------------|----------------------|---------|
+| hybrid        | hnsw      | float16          | 200              | 50         | 8  | 0.004628       | 3.559                | 0.130712|
+| hybrid        | hnsw      | float16          | 200              | 50         | 64 | 0.004498       | 4.804                | 0.130712|
+| hybrid        | hnsw      | float16          | 150              | 50         | 64 | 0.004520       | 3.870                | 0.130712|
+| hybrid        | hnsw      | float32          | 100              | 50         | 64 | 0.003387       | 1.929                | 0.130712|
+| hybrid        | hnsw      | float16          | 150              | 50         | 8  | 0.004771       | 2.496                | 0.130712|
+| hybrid        | hnsw      | float32          | 300              | 50         | 16 | 0.003461       | 3.622                | 0.130712|
+| hybrid        | hnsw      | float16          | 100              | 50         | 16 | 0.004402       | 3.120                | 0.130712|
+| hybrid        | hnsw      | float16          | 100              | 50         | 64 | 0.004615       | 3.361                | 0.130712|
+| hybrid        | hnsw      | float16          | 250              | 50         | 16 | 0.005002       | 3.627                | 0.130712|
+| hybrid        | hnsw      | float32          | 150              | 50         | 8  | 0.003246       | 2.471                | 0.130712|
+| hybrid        | hnsw      | float32          | 300              | 50         | 8  | 0.002921       | 3.443                | 0.130712|
+| hybrid        | hnsw      | float16          | 250              | 50         | 8  | 0.004366       | 3.094                | 0.130712|
+| hybrid        | hnsw      | float32          | 250              | 50         | 8  | 0.003318       | 3.126                | 0.130712|
+| vector        | hnsw      | float32          | 200              | 50         | 64 | 0.001116       | 2.790                | 0.130712|
+| vector        | hnsw      | float16          | 200              | 50         | 64 | 0.001965       | 4.808                | 0.129692|
+| vector        | hnsw      | float32          | 200              | 50         | 16 | 0.001359       | 2.773                | 0.129692|
+| vector        | hnsw      | float16          | 150              | 50         | 8  | 0.001405       | 3.907                | 0.128089|
+| vector        | hnsw      | float32          | 300              | 50         | 8  | 0.003236       | 2.742                | 0.127207|
+| vector        | hnsw      | float32          | 100              | 50         | 8  | 0.002346       | 3.088                | 0.126233|
+| vector        | hnsw      | float32          | 100              | 50         | 16 | 0.001478       | 1.896                | 0.116203|
+
 
 
 # Search Methods
@@ -198,39 +245,43 @@ This example defines a study where we compare two vector-based methods—one usi
 
 #### Study config
 ```yaml
+# paths to necessary data files
 corpus: "data/car_corpus.json"
 queries: "data/car_queries.json"
 qrels: "data/car_qrels.json"
 
+# vector field names
 index_settings:
   name: "car"
-  prefix: "car"
-  vector_field_name: "vector"
-  text_field_name: "text"
+  prefix: "car" # prefix for index name
+  vector_field_name: "vector" # name of the vector field to search on
+  text_field_name: "text" # name of the text field for lexical search
   from_existing: false
   additional_fields:
     - name: "make"
       type: "tag"
     - name: "model"
       type: "tag"
-  vector_dim: 384
+  vector_dim: 384 # should match first embedding model or from_existing
 
-embedding_models:
+# will run all search methods for each embedding model and then iterate
+embedding_models: # embedding cache would be awesome here.
+# if from_existing is true, first record is assumed to be the one used to create the index
   - type: "hf"
     model: "sentence-transformers/all-MiniLM-L6-v2"
     dim: 384
-    embedding_cache_name: "vec-cache"
+    embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
 
-search_methods: ["basic_vector", "pre_filter_vector"]
+search_methods: ["basic_vector", "pre_filter_vector"] # must match what is passed in search_method_map
 ```
 
 ---
 
 ### Writing Custom Search Methods
 
-Search methods can be anything you want—as long as they accept a `SearchMethodInput` and return a `SearchMethodOutput`. This allows you to test new retrieval strategies, add filters, or layer on post-processing logic.
+Search methods can be anything you want as long as the function accepts a `SearchMethodInput` and returns a `SearchMethodOutput`. This allows you to test new retrieval strategies, add filters, or layer on post-processing logic.
 
-#### code
+#### Code
 ```python
 def gather_vector_results(search_method_input: SearchMethodInput) -> SearchMethodOutput:
     redis_res_vector = {}
@@ -304,10 +355,13 @@ metrics = run_grid_study(
 )
 ```
 
+### Example output
 
-Here's a polished and clearer version of your **Data Requirements** section, matching the tone and structure of the rest of the content. It emphasizes flexibility while giving users a concrete foundation to build from:
+| search_method     | model                                      | avg_query_time | recall@k | precision | ndcg@k   |
+|-------------------|---------------------------------------------|----------------|-----------|-----------|----------|
+| pre_filter_vector | sentence-transformers/all-MiniLM-L6-v2     | 0.001177       | 1.0       | 0.25      | 0.914903 |
+| basic_vector      | sentence-transformers/all-MiniLM-L6-v2     | 0.002605       | 0.9       | 0.23      | 0.717676 |
 
----
 
 ## Data Requirements
 
@@ -403,11 +457,6 @@ Qrels define the relevance of documents to each query. They are required for eva
 ```
 
 > 🔍 Note: Relevance scores can be binary (`1` or `0`) for classification metrics or ranked (`2`, `1`, etc.) for ranking metrics like NDCG.
-
----
-
-Let me know if you'd like to include downloadable examples or a link to a starter dataset like BEIR for people to clone and try out.
-
 
 # Contributing
 We love contributors if you have an addition follow this process:
