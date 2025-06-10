@@ -13,7 +13,7 @@ The **Redis Retrieval Optimizer** is a framework for systematically measuring an
 
 To use the Retrieval Optimizer, you start with a labeled data set consisting of a corpus of texts, a set of natural language questions, and a collection of labels. You also define a set of search methods and embedding models to test against.
 
-The Retrieval Optimizer then lets you evaluate critical tradeoffs between **cost, speed, and latency**, helping you understand how different embedding models, retrieval strategies, and index configurations impact overall system performance. The tool's **Bayesian optimization** mode lets your fine-tune these index configurations. Ultimately, the tools let you implement **metrics-driven development** for your search applications — ensuring that decisions are grounded in data, not assumptions.
+The Retrieval Optimizer then lets you evaluate critical tradeoffs between **cost, speed, and latency**, helping you understand how different embedding models, retrieval strategies, and index configurations impact overall system performance. The tool's **Bayesian optimization** mode lets you fine-tune these index configurations. Ultimately, the tools let you implement **metrics-driven development** for your search applications — ensuring that decisions are grounded in data, not assumptions.
 
 # Example notebooks
 
