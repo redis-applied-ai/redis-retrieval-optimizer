@@ -9,15 +9,15 @@
 
 # Retrieval Optimizer
 
-Search and information retrieval is a challenging and often misunderstood problem. With the proliferation of vector search tools on the market, attention has increasingly shifted toward SEO gains and marketing claims—sometimes at the expense of actual retrieval quality.
+The **Redis Retrieval Optimizer** is a framework for systematically measuring and improving retrieval performance for vector and hybrid search. The framework helps you select the best combination of embedding model, index type, and query settings for your specific use case.
 
-The **Retrieval Optimizer** from Redis is designed to bring focus back to what matters: delivering relevant, high-quality results. This flexible framework enables you to systematically measure and improve retrieval performance for your specific data and use case. Rather than relying on guesswork or vague intuition, the Retrieval Optimizer helps you establish **baseline metrics** that serve as a foundation for meaningful evaluation and iteration.
+To use the Retrieval Optimizer, you start with a labeled data set consisting of a corpus of texts, a set of natural language questions, and a collection of labels. You also define a set of search methods and embedding models to test against.
 
-Beyond accuracy alone, it also supports evaluating critical tradeoffs between **cost, speed, and latency**, helping you understand how different embedding models, retrieval strategies, and index configurations impact overall system performance. The ultimate goal is to enable **metrics-driven development** for your search application—ensuring that decisions are grounded in data, not assumptions.
+The Retrieval Optimizer then lets you evaluate critical tradeoffs between **cost, speed, and latency**, helping you understand how different embedding models, retrieval strategies, and index configurations impact overall system performance. The tool's **Bayesian optimization** mode lets your fine-tune these index configurations. Ultimately, the tools let you implement **metrics-driven development** for your search applications — ensuring that decisions are grounded in data, not assumptions.
 
 # Example notebooks
 
-For complete code examples see the following notebooks:
+For complete code examples, see the following notebooks:
 
 | Topic | Notebook |
 | ------ | ------- |
@@ -26,7 +26,7 @@ For complete code examples see the following notebooks:
 | Bayesian Optimization | [00_bayes_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/bayesian_optimization/00_bayes_study.ipynb) |
 | Embedding model comparison | [00_comparison.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/comparison/00_comparison.ipynb) |
 
-# Quick Start
+# Quick start
 
 The Retrieval Optimizer supports two *study* types: **Grid** and **Bayesian Optimization**. Each is suited to a different stage of building a high-quality search system.
 
@@ -34,10 +34,9 @@ The Retrieval Optimizer supports two *study* types: **Grid** and **Bayesian Opti
 
 Use a grid study to explore the impact of different **embedding models** and **retrieval strategies**. These are typically the most important factors influencing search performance. This mode is ideal for establishing a performance baseline and identifying which techniques work best for your dataset.
 
-### Bayesian Optimization
+### Bayesian optimization
 
-Once you've identified a solid starting point, use Bayesian optimization to **fine-tune your index configuration**. It intelligently selects the most promising combinations to try—saving time compared to exhaustive testing. This mode is especially useful for balancing **cost, speed, and latency** as you work toward a production-ready solution.
-
+Once you've identified a solid starting point, use Bayesian optimization to **fine-tune your index configuration**. This mode intelligently selects the most promising combinations to test, in place of exhaustive testing (which is time-consuming). Bayesian optimization mode is especially useful for balancing **cost, speed, and latency** as you work toward a production-ready solution.
 
 ## Running a Grid study
 
@@ -99,7 +98,7 @@ metrics = run_grid_study(
 | vector         | sentence-transformers/all-MiniLM-L6-v2     | 0.003378       | 0.119653  | 0.302993  | 0.165573 |
 
 
-## Running a bayesian optimization
+## Running a Bayesian optimization
 Selects the next best configuration to try based on a heuristic. This is good when it would take a very long time to test all possible configurations.
 
 #### Study config:
@@ -193,7 +192,7 @@ metrics = run_bayes_study(
 
 
 
-# Search Methods
+# Search methods
 
 Below is a comprehensive table documenting the built-in search methods available in the Redis Retrieval Optimizer:
 
@@ -205,14 +204,14 @@ Below is a comprehensive table documenting the built-in search methods available
 | rerank | Two-stage retrieval with cross-encoder reranking | When high precision is crucial and latency is less important | <ul><li>First-stage retrieval with BM25/vector</li><li>Second-stage reranking with cross-encoder</li><li>Uses HuggingFace cross-encoder model</li><li>Higher quality but increased latency</li></ul> |
 | weighted_rrf | Reciprocal Rank Fusion with weights | Combining multiple search strategies with controlled blending | <ul><li>Fuses BM25 and vector search results</li><li>Configurable weighting between methods</li><li>Handles cases where methods have complementary strengths</li><li>Parameter k controls how quickly rankings decay</li></ul> |
 
-### Implementation Details
+### Implementation details
 
 - All search methods follow a common interface taking a SearchMethodInput and returning a SearchMethodOutput
 - Query times are automatically tracked in the query_metrics object
 - Each method handles error cases gracefully, returning empty results rather than failing
 - Results are returned as a `ranx.Run` object for consistent evaluation
 
-### Extending with Custom Methods
+### Extending with custom methods
 
 You can create custom search methods by implementing a function that:
 
@@ -229,11 +228,11 @@ CUSTOM_SEARCH_METHOD_MAP = {
 }
 ```
 
-## Custom Processors and Search Methods
+## Custom processors and search methods
 
 The Retrieval Optimizer is designed to be flexible and extensible. You can define your own **corpus processors** and **search methods** to support different data formats and retrieval techniques. This is especially useful when working with domain-specific data or testing out experimental search strategies.
 
-### Why Custom Functions Matter
+### Why custom functions matter
 
 Every search application is unique. You might store metadata differently, rely on custom vector filtering, or want to experiment with hybrid techniques. The framework makes it easy to plug in your own logic without needing to rewrite core infrastructure.
 
@@ -277,7 +276,7 @@ search_methods: ["basic_vector", "pre_filter_vector"] # must match what is passe
 
 ---
 
-### Writing Custom Search Methods
+### Writing custom search methods
 
 Search methods can be anything you want as long as the function accepts a `SearchMethodInput` and returns a `SearchMethodOutput`. This allows you to test new retrieval strategies, add filters, or layer on post-processing logic.
 
@@ -312,7 +311,7 @@ def gather_pre_filter_results(search_method_input: SearchMethodInput) -> SearchM
 
 ---
 
-### Writing a Custom Corpus Processor
+### Writing a custom corpus processor
 
 Corpus formats can vary significantly. A custom processor transforms your raw data into the shape required for indexing in Redis.
 
@@ -335,9 +334,9 @@ def process_car_corpus(corpus, emb_model):
 
 ---
 
-### Running the Custom Study
+### Running the custom study
 
-Once you’ve defined your search methods and processor, simply pass them into the study runner:
+Once you’ve defined your search methods and processor, pass them into the study runner:
 
 ```python
 from redis_retrieval_optimizer.grid_study import run_grid_study
@@ -363,15 +362,15 @@ metrics = run_grid_study(
 | basic_vector      | sentence-transformers/all-MiniLM-L6-v2     | 0.002605       | 0.9       | 0.23      | 0.717676 |
 
 
-## Data Requirements
+## Data requirements
 
-To run a retrieval study, you need three key datasets: **queries**, **corpus**, and **qrels**. The framework is flexible—data can be in any shape as long as you provide custom processors to interpret it. But if you're getting started, here's the expected format and some working examples to guide you.
+To run a retrieval study, you need three key datasets: **queries**, **corpus**, and **qrels**. The framework is flexible—data can be in any shape as long as you provide custom processors to interpret it. But if you're just getting started, here's the expected format and some working examples to guide you.
 
 ---
 
 ### Corpus
 
-This is the full set of documents you'll be searching against. It’s what gets indexed into Redis. The default assumption is that each document has a `text` field to search or embed, but you can customize this via a corpus processor.
+This is the full set of documents you'll be searching against. It’s what gets indexed into Redis. The default assumption is that each document has a `text` field to search or embed, but you can customize this using a corpus processor.
 
 **General structure**:
 
@@ -401,7 +400,7 @@ This is the full set of documents you'll be searching against. It’s what gets 
 
 ### Queries
 
-These are the search inputs you'll evaluate against the corpus. Each query should have a unique ID and the query text.
+These are the search inputs you'll evaluate against the corpus. Each query consist of the query text itself and a unique ID.
 
 **General structure**:
 
