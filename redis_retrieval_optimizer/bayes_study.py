@@ -152,10 +152,12 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
     search_method_output = search_fn(search_input)
 
     trial_metrics = utils.eval_trial_metrics(qrels, search_method_output.run)
-    trial_metrics["total_indexing_time"] = total_indexing_time
-    trial_metrics["avg_query_time"] = utils.get_query_time_stats(
-        search_method_output.query_metrics.query_times
-    )["avg_query_time"]
+    trial_metrics["total_indexing_time"] = -(total_indexing_time)
+    trial_metrics["avg_query_time"] = -(
+        utils.get_query_time_stats(search_method_output.query_metrics.query_times)[
+            "avg_query_time"
+        ]
+    )
 
     # save results as we go in case of failure
     persist_metrics(redis_url, trial_settings, trial_metrics, study_config.study_id)
