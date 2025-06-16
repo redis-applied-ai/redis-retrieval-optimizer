@@ -15,6 +15,10 @@ To use the Retrieval Optimizer, you start with a labeled data set consisting of 
 
 The Retrieval Optimizer then lets you evaluate critical tradeoffs between **cost, speed, and latency**, helping you understand how different embedding models, retrieval strategies, and index configurations impact overall system performance. The tool's **Bayesian optimization** mode lets you fine-tune these index configurations. Ultimately, the tools let you implement **metrics-driven development** for your search applications — ensuring that decisions are grounded in data, not assumptions.
 
+# Installation
+
+`pip install redis-retrieval-optimizer` | [pypi](https://pypi.org/project/redis-retrieval-optimizer/)
+
 # Example notebooks
 
 For complete code examples, see the following notebooks:
