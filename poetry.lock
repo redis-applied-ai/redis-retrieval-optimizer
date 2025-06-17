@@ -7155,4 +7155,4 @@ voyageai = ["voyageai"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11, <3.14"
-content-hash = "243753c3310017e9c8b4934740ddf2199ceceb592bef47e2b5422f1d149f7d8d"
+content-hash = "f1bd4e00b6899b79b78606ba53be76f4811e56c23747ae16f508e422c69ac9b1"
