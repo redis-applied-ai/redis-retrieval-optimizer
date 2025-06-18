@@ -6,6 +6,7 @@ from redisvl.query import VectorQuery
 from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.base import run_search_w_time
 
+
 # TODO: is this needed as a separate function?
 def vector_query(
     query: str,

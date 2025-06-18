@@ -1,4 +1,4 @@
-corpus: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/bayes_data/corpus.json
+corpus: /Users/tyler.hutcherson/Documents/AppliedAI/redis-retrieval-optimizer/tests/integration/bayes_data/corpus.json
 embedding_models:
 - dim: 384
   dtype: float32
@@ -44,8 +44,8 @@ optimization_settings:
   vector_data_types:
   - float16
   - float32
-qrels: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/bayes_data/qrels.json
-queries: /Users/robert.shelton/Documents/ll-ret-opt/tests/integration/bayes_data/queries.json
+qrels: /Users/tyler.hutcherson/Documents/AppliedAI/redis-retrieval-optimizer/tests/integration/bayes_data/qrels.json
+queries: /Users/tyler.hutcherson/Documents/AppliedAI/redis-retrieval-optimizer/tests/integration/bayes_data/queries.json
 search_methods:
 - vector
 - hybrid

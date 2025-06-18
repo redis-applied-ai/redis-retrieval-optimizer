@@ -23,6 +23,7 @@ def vector_query_filter(
 
     return query
 
+
 # TODO is this needed as a separate function?
 def gen_hybrid_query(
     emb_model,
@@ -31,7 +32,7 @@ def gen_hybrid_query(
     vector_field_name: str = "vector",
     text_field_name: str = "text",
     id_field_name: str = "_id",
-    ) -> HybridQuery:
+) -> HybridQuery:
     """Generate a Redis vector query given user query string."""
 
     vector = emb_model.embed(user_query, as_buffer=True, dtype="float32")
@@ -41,7 +42,7 @@ def gen_hybrid_query(
         text_field_name=text_field_name,
         vector=vector,
         vector_field_name=vector_field_name,
-        alpha=0.7, # TODO make this configurable
+        alpha=0.7,  # TODO make this configurable
         num_results=num_results,
         return_fields=[id_field_name, text_field_name],
     )
@@ -72,12 +73,12 @@ def gather_hybrid_results(
         text_query = search_method_input.raw_queries[key]
         try:
             hybrid_query = gen_hybrid_query(
-                            emb_model=search_method_input.emb_model,
-                            user_query=text_query,
-                            num_results=10, # TODO make this configurable
-                            vector_field_name=search_method_input.vector_field_name,
-                            text_field_name=search_method_input.text_field_name,
-                            id_field_name=search_method_input.id_field_name,
+                emb_model=search_method_input.emb_model,
+                user_query=text_query,
+                num_results=10,  # TODO make this configurable
+                vector_field_name=search_method_input.vector_field_name,
+                text_field_name=search_method_input.text_field_name,
+                id_field_name=search_method_input.id_field_name,
             )
             res = run_search_w_time(
                 search_method_input.index,

@@ -48,7 +48,9 @@ def weighted_rrf(
     vector_query = vector_query_filter(emb_model, user_query, num_results=k)
 
     # Create the full-text bm25 query
-    full_text_query = bm25_query_optional("text", id_field_name, user_query, num_results=k)
+    full_text_query = bm25_query_optional(
+        "text", id_field_name, user_query, num_results=k
+    )
 
     # Run queries individually
     vector_query_results = index.query(vector_query)
@@ -79,8 +81,8 @@ def gather_weighted_rrf(search_method_input: SearchMethodInput) -> SearchMethodO
                 search_method_input.index,
                 search_method_input.emb_model,
                 text_query,
-                num_results=10, # TODO make this configurable
-                k=20, # TODO make this configurable
+                num_results=10,  # TODO make this configurable
+                k=20,  # TODO make this configurable
                 id_field_name=search_method_input.id_field_name,
             )
             query_time = time.time() - start

@@ -78,7 +78,7 @@ def gather_rerank_results(search_method_input: SearchMethodInput):
                 reranker,
                 search_method_input.emb_model,
                 text_query,
-                num_results=10, # TODO make this configurable
+                num_results=10,  # TODO make this configurable
                 text_field_name=search_method_input.text_field_name,
                 id_field_name=search_method_input.id_field_name,
             )
