@@ -232,6 +232,112 @@ CUSTOM_SEARCH_METHOD_MAP = {
 }
 ```
 
+# Threshold Optimization
+
+The Redis Retrieval Optimizer includes threshold optimization capabilities for RedisVL's **Semantic Cache** and **Semantic Router**. This feature helps you automatically tune distance thresholds to maximize performance metrics like F1 score, precision, or recall.
+
+## Cache Threshold Optimization
+
+Optimize thresholds for semantic caches to improve cache hit rates and relevance:
+
+```python
+from redis_retrieval_optimizer.threshold_optimization import CacheThresholdOptimizer
+from redisvl.extensions.cache.llm import SemanticCache
+
+# Create a semantic cache
+cache = SemanticCache(
+    name="my_cache",
+    redis_url="redis://localhost:6379",
+    distance_threshold=0.5  # Initial threshold
+)
+
+# Add some data to the cache
+paris_key = cache.store(
+    prompt="what is the capital of france?", 
+    response="paris"
+)
+
+# Define test data for optimization
+test_data = [
+    {
+        "query": "What's the capital of France??",
+        "query_match": paris_key  # Expected cache hit
+    },
+    {
+        "query": "What's the capital of Britain?", 
+        "query_match": ""  # Expected cache miss
+    }
+]
+
+# Optimize the threshold
+optimizer = CacheThresholdOptimizer(cache, test_data)
+optimizer.optimize()
+
+print(f"Optimized threshold: {cache.distance_threshold}")
+```
+
+## Router Threshold Optimization
+
+Optimize thresholds for semantic routers to improve routing accuracy:
+
+```python
+from redisvl.extensions.router import Route, SemanticRouter
+from redisvl.utils.vectorize import HFTextVectorizer
+from redis_retrieval_optimizer.threshold_optimization import RouterThresholdOptimizer
+
+# Define routes
+routes = [
+    Route(
+        name="greeting",
+        references=["hello", "hi"],
+        metadata={"type": "greeting"},
+        distance_threshold=0.5,
+    ),
+    Route(
+        name="farewell", 
+        references=["bye", "goodbye"],
+        metadata={"type": "farewell"},
+        distance_threshold=0.5,
+    ),
+]
+
+# Create router
+router = SemanticRouter(
+    name="my-router",
+    vectorizer=HFTextVectorizer(),
+    routes=routes,
+    redis_url="redis://localhost:6379"
+)
+
+# Define test data
+test_data = [
+    {"query": "hello there", "query_match": "greeting"},
+    {"query": "goodbye", "query_match": "farewell"},
+    {"query": "hola", "query_match": "greeting"},  # Spanish
+]
+
+# Optimize route thresholds
+optimizer = RouterThresholdOptimizer(router, test_data)
+optimizer.optimize(max_iterations=20, search_step=0.1)
+
+print(f"Optimized thresholds: {router.route_thresholds}")
+```
+
+## Evaluation Metrics
+
+Threshold optimization supports multiple evaluation metrics:
+
+```python
+from redis_retrieval_optimizer.threshold_optimization import EvalMetric
+
+# Available metrics
+optimizer = CacheThresholdOptimizer(cache, test_data, eval_metric="f1")       # F1 score (default)
+optimizer = CacheThresholdOptimizer(cache, test_data, eval_metric="precision") # Precision
+optimizer = CacheThresholdOptimizer(cache, test_data, eval_metric="recall")    # Recall
+```
+
+For complete documentation and examples, see [docs/examples/threshold_optimization](docs/examples/threshold_optimization/).
+
 ## Custom processors and search methods
 
 The Retrieval Optimizer is designed to be flexible and extensible. You can define your own **corpus processors** and **search methods** to support different data formats and retrieval techniques. This is especially useful when working with domain-specific data or testing out experimental search strategies.
@@ -340,7 +446,7 @@ def process_car_corpus(corpus, emb_model):
 
 ### Running the custom study
 
-Once you’ve defined your search methods and processor, pass them into the study runner:
+Once you've defined your search methods and processor, pass them into the study runner:
 
 ```python
 from redis_retrieval_optimizer.grid_study import run_grid_study
@@ -374,7 +480,7 @@ To run a retrieval study, you need three key datasets: **queries**, **corpus**, 
 
 ### Corpus
 
-This is the full set of documents you'll be searching against. It’s what gets indexed into Redis. The default assumption is that each document has a `text` field to search or embed, but you can customize this using a corpus processor.
+This is the full set of documents you'll be searching against. It's what gets indexed into Redis. The default assumption is that each document has a `text` field to search or embed, but you can customize this using a corpus processor.
 
 **General structure**:
 
@@ -423,7 +529,7 @@ These are the search inputs you'll evaluate against the corpus. Each query consi
 }
 ```
 
-> 💡 Using custom query metadata? That’s fine—just make sure your custom search method knows how to interpret it.
+> 💡 Using custom query metadata? That's fine—just make sure your custom search method knows how to interpret it.
 
 ---
 

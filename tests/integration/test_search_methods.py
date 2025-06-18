@@ -1,7 +1,6 @@
 import json
 import os
 
-import numpy as np
 import pytest
 from ranx import Qrels, Run, evaluate
 from redisvl.index import SearchIndex
@@ -114,7 +113,7 @@ def vector_index(redis_url, test_data):
     }
 
     # Initialize index
-    index = SearchIndex.from_dict(schema, redis_conn=redis_url)
+    index = SearchIndex.from_dict(schema, redis_url=redis_url)
 
     # Clean up any existing data
     try:
