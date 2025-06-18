@@ -1,12 +1,19 @@
 import random
 from typing import Any, Callable, Dict, List
-from ranx import Qrels, Run, evaluate
-import numpy as np
 
+import numpy as np
+from ranx import Qrels, Run, evaluate
 from redisvl.extensions.router.semantic import SemanticRouter
-from redis_retrieval_optimizer.threshold_optimization.base import BaseThresholdOptimizer, EvalMetric
+
+from redis_retrieval_optimizer.threshold_optimization.base import (
+    BaseThresholdOptimizer,
+    EvalMetric,
+)
 from redis_retrieval_optimizer.threshold_optimization.schema import LabeledData
-from redis_retrieval_optimizer.threshold_optimization.utils import NULL_RESPONSE_KEY, _format_qrels
+from redis_retrieval_optimizer.threshold_optimization.utils import (
+    NULL_RESPONSE_KEY,
+    _format_qrels,
+)
 
 
 def _generate_run_router(test_data: List[LabeledData], router: SemanticRouter) -> "Run":
@@ -15,7 +22,7 @@ def _generate_run_router(test_data: List[LabeledData], router: SemanticRouter) -
         raise ImportError("ranx is required for threshold optimization")
     if np is None:
         raise ImportError("numpy is required for threshold optimization")
-        
+
     run_dict: Dict[Any, Any] = {}
 
     for td in test_data:
@@ -38,7 +45,7 @@ def _eval_router(
     """Evaluate acceptable metric given run and qrels data"""
     if evaluate is None:
         raise ImportError("ranx is required for threshold optimization")
-        
+
     run = _generate_run_router(test_data, router)
     return evaluate(qrels, run, eval_metric, make_comparable=True)
 
@@ -49,7 +56,7 @@ def _router_random_search(
     """Performs random search for many thresholds to many routes"""
     if np is None:
         raise ImportError("numpy is required for threshold optimization")
-        
+
     score_threshold_values = []
     for route in route_names:
         score_threshold_values.append(
@@ -169,4 +176,4 @@ class RouterThresholdOptimizer(BaseThresholdOptimizer):
     def optimize(self, **kwargs: Any):
         """Optimize kicks off the optimization process for router"""
         qrels = _format_qrels(self.test_data)
-        self.opt_fn(self.optimizable, self.test_data, qrels, self.eval_metric, **kwargs) 
+        self.opt_fn(self.optimizable, self.test_data, qrels, self.eval_metric, **kwargs)

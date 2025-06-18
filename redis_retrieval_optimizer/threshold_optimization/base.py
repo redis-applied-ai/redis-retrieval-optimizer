@@ -42,4 +42,4 @@ class BaseThresholdOptimizer(ABC):
     @abstractmethod
     def optimize(self, **kwargs: Any):
         """Optimize thresholds using the provided optimization function."""
-        pass 
+        pass

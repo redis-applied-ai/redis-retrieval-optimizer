@@ -1,6 +1,7 @@
 from typing import List
-from ranx import Qrels
+
 import numpy as np
+from ranx import Qrels
 
 from redis_retrieval_optimizer.threshold_optimization.schema import LabeledData
 
@@ -13,7 +14,7 @@ def _format_qrels(test_data: List[LabeledData]) -> "Qrels":
         raise ImportError("ranx is required for threshold optimization")
     if np is None:
         raise ImportError("numpy is required for threshold optimization")
-        
+
     qrels_dict = {}
 
     for td in test_data:
@@ -28,4 +29,4 @@ def _format_qrels(test_data: List[LabeledData]) -> "Qrels":
 
 def _validate_test_dict(test_dict: List[dict]) -> List[LabeledData]:
     """Convert/validate test_dict for use in optimizer"""
-    return [LabeledData(**d) for d in test_dict] 
+    return [LabeledData(**d) for d in test_dict]

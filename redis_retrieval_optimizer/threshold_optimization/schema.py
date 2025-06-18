@@ -8,4 +8,4 @@ class LabeledData(BaseModel):
     id: str = Field(default_factory=lambda: create_ulid())
     query: str
     query_match: Optional[str] = None
-    response: List[dict] = [] 
+    response: List[dict] = []

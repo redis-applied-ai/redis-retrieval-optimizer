@@ -1,19 +1,26 @@
 from typing import TYPE_CHECKING, Any, Callable, Dict, List
-from ranx import Qrels, Run, evaluate
-import numpy as np
 
+import numpy as np
+from ranx import Qrels, Run, evaluate
 from redisvl.extensions.cache.llm.semantic import SemanticCache
 from redisvl.query import RangeQuery
-from redis_retrieval_optimizer.threshold_optimization.base import BaseThresholdOptimizer, EvalMetric
+
+from redis_retrieval_optimizer.threshold_optimization.base import (
+    BaseThresholdOptimizer,
+    EvalMetric,
+)
 from redis_retrieval_optimizer.threshold_optimization.schema import LabeledData
-from redis_retrieval_optimizer.threshold_optimization.utils import NULL_RESPONSE_KEY, _format_qrels
+from redis_retrieval_optimizer.threshold_optimization.utils import (
+    NULL_RESPONSE_KEY,
+    _format_qrels,
+)
 
 
 def _generate_run_cache(test_data: List[LabeledData], threshold: float) -> "Run":
     """Format observed data for evaluation with ranx"""
     if Run is None:
         raise ImportError("ranx is required for threshold optimization")
-        
+
     run_dict: Dict[str, Dict[str, int]] = {}
 
     for td in test_data:
@@ -37,7 +44,7 @@ def _eval_cache(
     """Formats run data and evaluates supported metric"""
     if evaluate is None:
         raise ImportError("ranx is required for threshold optimization")
-        
+
     run = _generate_run_cache(test_data, threshold)
     return evaluate(qrels, run, metric, make_comparable=True)
 
@@ -56,7 +63,7 @@ def _grid_search_opt_cache(
     """Evaluates all thresholds in linspace for cache to determine optimal"""
     if np is None:
         raise ImportError("numpy is required for threshold optimization")
-        
+
     thresholds = np.linspace(0.01, 0.8, 60)
     metrics = {}
 
@@ -139,4 +146,4 @@ class CacheThresholdOptimizer(BaseThresholdOptimizer):
 
     def optimize(self, **kwargs: Any):
         """Optimize thresholds using the provided optimization function for cache case."""
-        self.opt_fn(self.optimizable, self.test_data, self.eval_metric, **kwargs) 
+        self.opt_fn(self.optimizable, self.test_data, self.eval_metric, **kwargs)

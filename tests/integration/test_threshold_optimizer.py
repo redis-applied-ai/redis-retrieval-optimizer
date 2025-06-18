@@ -6,10 +6,10 @@ if sys.version_info.major == 3 and sys.version_info.minor < 10:
     pytest.skip("Test requires Python 3.10 or higher", allow_module_level=True)
 
 from redis import Redis
-
 from redisvl.extensions.cache.llm import SemanticCache
 from redisvl.extensions.router import Route, SemanticRouter
 from redisvl.extensions.router.schema import RoutingConfig
+
 from redis_retrieval_optimizer.threshold_optimization import (
     CacheThresholdOptimizer,
     EvalMetric,
@@ -56,6 +56,7 @@ def hf_vectorizer():
     """Mock HF vectorizer for testing"""
     try:
         from redisvl.utils.vectorize import HFTextVectorizer
+
         return HFTextVectorizer(model="sentence-transformers/all-MiniLM-L6-v2")
     except ImportError:
         pytest.skip("HuggingFace transformers not available")
@@ -322,4 +323,4 @@ def test_optimizer_with_invalid_metric(redis_url):
     test_dict = [{"query": "test", "query_match": ""}]
 
     with pytest.raises(ValueError):
-        CacheThresholdOptimizer(cache, test_dict, eval_metric="invalid_metric") 
+        CacheThresholdOptimizer(cache, test_dict, eval_metric="invalid_metric")

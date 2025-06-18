@@ -26,7 +26,7 @@ def test_known_precision_case():
     """
     if evaluate is None:
         pytest.skip("ranx not available")
-        
+
     # Setup test data
     test_data = [
         LabeledData(
@@ -62,7 +62,7 @@ def test_known_precision_with_no_matches():
     """Test case where some queries have no matches."""
     if evaluate is None:
         pytest.skip("ranx not available")
-        
+
     test_data = [
         LabeledData(
             query="test query 2",
@@ -80,4 +80,4 @@ def test_known_precision_with_no_matches():
 
     # Calculate precision
     precision = evaluate(qrels, run, "precision")
-    assert precision == 1.0  # (0.0 + 1.0) / 2 
+    assert precision == 1.0  # (0.0 + 1.0) / 2
