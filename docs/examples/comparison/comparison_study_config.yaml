@@ -1,7 +1,7 @@
 # paths to necessary data files
-corpus: "../../../data/nfcorpus_corpus.json" # optional if from_existing
-queries: "../../../data/nfcorpus_queries.json"
-qrels: "../../../data/nfcorpus_qrels.json"
+corpus: "data/nfcorpus_corpus.json" # optional if from_existing
+queries: "data/nfcorpus_queries.json"
+qrels: "data/nfcorpus_qrels.json"
 
 # vector field names
 index_settings:

@@ -1,0 +1,72 @@
+{
+    "car-1": {
+        "query": "At what speed should I shift from 2 to 3 with a manual transmission?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    },
+    "car-2": {
+        "query": "How do I set the cruise control?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    },
+    "car-3": {
+        "query": "What does the ABS system do?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    },
+    "car-4": {
+        "query": "What type of oil should I use for this car?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    },
+    "car-5": {
+        "query": "How do I arm the security system for this car?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    },
+    "car-6": {
+        "query": "What should I do if brake fluid is low?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    },
+    "car-7": {
+        "query": "When should I replace wiper blades?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    },
+    "car-8": {
+        "query": "What sized tires can I put on this car?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    },
+    "car-9": {
+        "query": "How to jump start this car?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    },
+    "car-10": {
+        "query": "How do I stop paint damage?",
+        "query_metadata": {
+            "make": "mazda",
+            "model": "3"
+        }
+    }
+}

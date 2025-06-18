@@ -1,7 +1,7 @@
 # paths to necessary data files
-corpus: "data/car_corpus.json" # optional if from_existing
-queries: "data/car_queries.json"
-qrels: "data/car_qrels.json"
+corpus: "../resources/cars/car_corpus.json" # optional if from_existing
+queries: "../resources/cars/car_queries.json"
+qrels: "../resources/cars/car_qrels.json"
 
 # vector field names
 index_settings:

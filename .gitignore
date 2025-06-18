@@ -4,6 +4,7 @@ models/
 .python-version
 __pycache__/
 .env
+.venv
 dist/
 .pytest_cache
 .mypy_cache
