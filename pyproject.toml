@@ -32,6 +32,16 @@ types-tabulate = "*"
 anyio = {extras = ["trio"], version = "^4.4.0"}
 ipykernel = "^6.29.5"
 
+[tool.poetry.scripts]
+format = "scripts:format"
+check-format = "scripts:check_format"
+sort-imports = "scripts:sort_imports"
+check-sort-imports = "scripts:check_sort_imports"
+check-lint = "scripts:check_lint"
+check-mypy = "scripts:check_mypy"
+test = "scripts:test"
+
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
