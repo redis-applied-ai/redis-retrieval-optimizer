@@ -5,3 +5,4 @@ models/
 __pycache__/
 .env
 dist/
+.pytest_cache
