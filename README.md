@@ -1,25 +1,66 @@
 <div align="center">
-<div><img src="https://raw.githubusercontent.com/redis/redis-vl-python/main/docs/_static/Redis_Logo_Red_RGB.svg" style="width: 130px"> </div>
+
+<img src="https://raw.githubusercontent.com/redis/redis-vl-python/main/docs/_static/Redis_Logo_Red_RGB.svg" width="130">
+
+# 🚀 Redis Retrieval Optimizer
+
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Language](https://img.shields.io/github/languages/top/redis-applied-ai/retrieval-optimizer)
 ![GitHub last commit](https://img.shields.io/github/last-commit/redis-applied-ai/retrieval-optimizer)
 
+---
+
+**Stop guessing. Start measuring.** 📊
+
+Transform your retrieval system from *"looks good to me"* to *"proven to perform"* with systematic benchmarking and Bayesian optimization.
+
 </div>
 
-# Retrieval Optimizer
+## ✨ What is Redis Retrieval Optimizer?
 
-The **Redis Retrieval Optimizer** is a framework for systematically measuring and improving retrieval performance for vector and hybrid search. The framework helps you select the best combination of embedding model, index type, and query settings for your specific use case.
+The **Retrieval Optimizer** is a powerful framework that takes the guesswork out of building high-performance search systems. Whether you're working with vector search, hybrid retrieval, or traditional text search, this tool helps you **scientifically measure and optimize** your search performance.
 
-To use the Retrieval Optimizer, you start with a labeled data set consisting of a corpus of texts, a set of natural language questions, and a collection of labels. You also define a set of search methods and embedding models to test against.
+### 🎯 Why You Need This
 
-The Retrieval Optimizer then lets you evaluate critical tradeoffs between **cost, speed, and latency**, helping you understand how different embedding models, retrieval strategies, and index configurations impact overall system performance. The tool's **Bayesian optimization** mode lets you fine-tune these index configurations. Ultimately, the tools let you implement **metrics-driven development** for your search applications — ensuring that decisions are grounded in data, not assumptions.
+- **🔬 Evidence-Based Decisions**: Replace assumptions with hard data about what actually works for your use case
+- **⚡ Performance Optimization**: Find the perfect balance between speed, accuracy, and cost
+- **🤖 Smart Automation**: Use Bayesian optimization to intelligently explore the configuration space
+- **📈 Comprehensive Metrics**: Track everything from latency to relevance with industry-standard evaluation metrics
+- **🔧 Easy Integration**: Works with your existing Redis setup and popular embedding models
 
-# Installation
+### 🚀 Key Features
 
-`pip install redis-retrieval-optimizer` | [pypi](https://pypi.org/project/redis-retrieval-optimizer/)
+| Feature | Description |
+|---------|-------------|
+| **🔄 Grid Search** | Systematically test different embedding models and retrieval strategies |
+| **🧠 Bayesian Optimization** | Intelligently fine-tune index configurations for optimal performance |
+| **📊 Rich Metrics** | Track recall, precision, NDCG, F1, query time, and indexing performance |
+| **🔍 Multiple Search Methods** | Compare BM25, vector search, hybrid, reranking, and weighted RRF |
+| **🎛️ Threshold Optimization** | Automatically tune semantic cache and router thresholds |
+| **🔌 Extensible Design** | Easily add custom search methods and data processors |
 
-# Example notebooks
+
+### 🎪 How It Works
+
+1. **📁 Prepare Your Data**: Bring your corpus, queries, and relevance labels
+2. **⚙️ Define Your Tests**: Choose embedding models and search methods to compare
+3. **🔬 Run Experiments**: Let the optimizer systematically test configurations
+4. **📈 Analyze Results**: Get detailed performance metrics and recommendations
+5. **🚀 Deploy Optimized Config**: Use the best-performing setup in production
+
+**The result?** A search system backed by data, not hunches.
+
+
+## 📦 Installation
+
+Install the optimizer from [PyPI](https://pypi.org/project/redis-retrieval-optimizer/):
+
+```bash
+pip install redis-retrieval-optimizer
+```
+
+## 📚 Example Notebooks
 
 For complete code examples, see the following notebooks:
 
@@ -30,7 +71,9 @@ For complete code examples, see the following notebooks:
 | Bayesian Optimization | [00_bayes_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/bayesian_optimization/00_bayes_study.ipynb) |
 | Embedding model comparison | [00_comparison.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/comparison/00_comparison.ipynb) |
 
-# Quick start
+---
+
+## 🚀 Quick Start
 
 The Retrieval Optimizer supports two *study* types: **Grid** and **Bayesian Optimization**. Each is suited to a different stage of building a high-quality search system.
 
@@ -44,7 +87,7 @@ Once you've identified a solid starting point, use Bayesian optimization to **fi
 
 ## Running a Grid study
 
-#### Define study config
+#### Study config
 ```yaml
 # paths to necessary data files
 corpus: "data/nfcorpus_corpus.json"
@@ -105,7 +148,7 @@ metrics = run_grid_study(
 ## Running a Bayesian optimization
 Selects the next best configuration to try based on a heuristic. This is good when it would take a very long time to test all possible configurations.
 
-#### Study config:
+#### Study config
 ```yaml
 # path to data files for easy read
 corpus: "data/nfcorpus_corpus.json"
@@ -194,11 +237,11 @@ metrics = run_bayes_study(
 | vector        | hnsw      | float32          | 100              | 50         | 8  | 0.002346       | 3.088                | 0.126233|
 | vector        | hnsw      | float32          | 100              | 50         | 16 | 0.001478       | 1.896                | 0.116203|
 
+---
 
+## 🔍 Search Methods
 
-# Search methods
-
-Below is a comprehensive table documenting the built-in search methods available in the Redis Retrieval Optimizer:
+Below is a comprehensive table documenting the built-in search methods available in the Retrieval Optimizer:
 
 | Method | Description | Use Case | Key Features |
 |--------|-------------|----------|--------------|
@@ -232,11 +275,11 @@ CUSTOM_SEARCH_METHOD_MAP = {
 }
 ```
 
-# Threshold Optimization
+## 🎛️ Threshold Optimization
 
-The Redis Retrieval Optimizer includes threshold optimization capabilities for RedisVL's **Semantic Cache** and **Semantic Router**. This feature helps you automatically tune distance thresholds to maximize performance metrics like F1 score, precision, or recall.
+The Retrieval Optimizer includes threshold optimization capabilities for RedisVL's **Semantic Cache** and **Semantic Router**. This feature helps you automatically tune distance thresholds to maximize performance metrics like F1 score, precision, or recall.
 
-## Cache Threshold Optimization
+### Cache Threshold Optimization
 
 Optimize thresholds for semantic caches to improve cache hit rates and relevance:
 
@@ -276,7 +319,7 @@ optimizer.optimize()
 print(f"Optimized threshold: {cache.distance_threshold}")
 ```
 
-## Router Threshold Optimization
+### Router Threshold Optimization
 
 Optimize thresholds for semantic routers to improve routing accuracy:
 
@@ -323,7 +366,7 @@ optimizer.optimize(max_iterations=20, search_step=0.1)
 print(f"Optimized thresholds: {router.route_thresholds}")
 ```
 
-## Evaluation Metrics
+### Evaluation Metrics
 
 Threshold optimization supports multiple evaluation metrics:
 
@@ -338,7 +381,7 @@ optimizer = CacheThresholdOptimizer(cache, test_data, eval_metric="recall")    #
 
 For complete documentation and examples, see [docs/examples/threshold_optimization](docs/examples/threshold_optimization/).
 
-## Custom processors and search methods
+## 🔧 Custom Processors and Search Methods
 
 The Retrieval Optimizer is designed to be flexible and extensible. You can define your own **corpus processors** and **search methods** to support different data formats and retrieval techniques. This is especially useful when working with domain-specific data or testing out experimental search strategies.
 
@@ -472,7 +515,7 @@ metrics = run_grid_study(
 | basic_vector      | sentence-transformers/all-MiniLM-L6-v2     | 0.002605       | 0.9       | 0.23      | 0.717676 |
 
 
-## Data requirements
+## 📊 Data Requirements
 
 To run a retrieval study, you need three key datasets: **queries**, **corpus**, and **qrels**. The framework is flexible—data can be in any shape as long as you provide custom processors to interpret it. But if you're just getting started, here's the expected format and some working examples to guide you.
 
@@ -567,7 +610,8 @@ Qrels define the relevance of documents to each query. They are required for eva
 
 > 🔍 Note: Relevance scores can be binary (`1` or `0`) for classification metrics or ranked (`2`, `1`, etc.) for ranking metrics like NDCG.
 
-# Contributing
+## 🤝 Contributing
+
 We love contributors if you have an addition follow this process:
 - Fork the repo
 - Make contribution
