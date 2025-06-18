@@ -164,7 +164,7 @@ def index_from_schema(schema, redis_url, recreate_index, recreate_data):
     index = SearchIndex.from_dict(schema, redis_url=redis_url)
 
     if recreate_index:
-        if recreate_data:
+        if recreate_data and index.exists():
             index.delete(drop=True)
         index.create()
 

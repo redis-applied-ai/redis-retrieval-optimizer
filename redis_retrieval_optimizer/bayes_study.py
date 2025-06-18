@@ -163,7 +163,7 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
     persist_metrics(redis_url, trial_settings, trial_metrics, study_config.study_id)
 
     return cost_fn(
-        trial_metrics, study_config.optimization_settings.metric_weights.dict()
+        trial_metrics, study_config.optimization_settings.metric_weights.model_dump()
     )
 
 
