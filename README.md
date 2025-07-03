@@ -136,7 +136,7 @@ metrics = run_grid_study(
 ```
 
 #### Example output
-| search_method | model                                      | avg_query_time | recall@k | precision | ndcg@k   |
+| search_method | model                                      | avg_query_time | recall | precision | ndcg  |
 |----------------|---------------------------------------------|----------------|-----------|-----------|----------|
 | weighted_rrf   | sentence-transformers/all-MiniLM-L6-v2     | 0.006608       | 0.156129  | 0.261056  | 0.204241 |
 | rerank         | sentence-transformers/all-MiniLM-L6-v2     | 0.127574       | 0.156039  | 0.260437  | 0.190298 |
@@ -169,7 +169,7 @@ index_settings:
 optimization_settings:
   # defines weight of each metric in optimization function
   metric_weights:
-    f1_at_k: 1
+    f1: 1
     total_indexing_time: 1
   algorithms: ["hnsw"] # indexing algorithm to be included in the study
   vector_data_types: ["float16", "float32"] # data types to be included in the study
@@ -214,7 +214,7 @@ metrics = run_bayes_study(
 ```
 
 #### Example output
-| search_method | algorithm | vector_data_type | ef_construction | ef_runtime | m  | avg_query_time | total_indexing_time | f1@k    |
+| search_method | algorithm | vector_data_type | ef_construction | ef_runtime | m  | avg_query_time | total_indexing_time | f1    |
 |---------------|-----------|------------------|------------------|------------|----|----------------|----------------------|---------|
 | hybrid        | hnsw      | float16          | 200              | 50         | 8  | 0.004628       | 3.559                | 0.130712|
 | hybrid        | hnsw      | float16          | 200              | 50         | 64 | 0.004498       | 4.804                | 0.130712|
@@ -296,7 +296,7 @@ cache = SemanticCache(
 
 # Add some data to the cache
 paris_key = cache.store(
-    prompt="what is the capital of france?", 
+    prompt="what is the capital of france?",
     response="paris"
 )
 
@@ -307,7 +307,7 @@ test_data = [
         "query_match": paris_key  # Expected cache hit
     },
     {
-        "query": "What's the capital of Britain?", 
+        "query": "What's the capital of Britain?",
         "query_match": ""  # Expected cache miss
     }
 ]
@@ -337,7 +337,7 @@ routes = [
         distance_threshold=0.5,
     ),
     Route(
-        name="farewell", 
+        name="farewell",
         references=["bye", "goodbye"],
         metadata={"type": "farewell"},
         distance_threshold=0.5,
@@ -509,7 +509,7 @@ metrics = run_grid_study(
 
 ### Example output
 
-| search_method     | model                                      | avg_query_time | recall@k | precision | ndcg@k   |
+| search_method     | model                                      | avg_query_time | recall | precision | ndcg   |
 |-------------------|---------------------------------------------|----------------|-----------|-----------|----------|
 | pre_filter_vector | sentence-transformers/all-MiniLM-L6-v2     | 0.001177       | 1.0       | 0.25      | 0.914903 |
 | basic_vector      | sentence-transformers/all-MiniLM-L6-v2     | 0.002605       | 0.9       | 0.23      | 0.717676 |

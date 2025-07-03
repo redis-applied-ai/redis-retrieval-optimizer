@@ -23,7 +23,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -53,10 +53,5 @@ jobs:
 
     - name: Run tests
       run: poetry run test
-      env:
-        REDIS_URL: redis://localhost:6379/0
-
-    - name: Run tests with coverage
-      run: poetry run pytest
       env:
         REDIS_URL: redis://localhost:6379/0
