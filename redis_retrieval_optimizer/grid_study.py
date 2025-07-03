@@ -29,10 +29,10 @@ def update_metric_row(
     )
     metrics["model"].append(embedding_settings.model)
     metrics["model_dim"].append(embedding_settings.dim)
-    metrics["recall@k"].append(trial_metrics["recall"])
-    metrics["ndcg@k"].append(trial_metrics["ndcg"])
+    metrics["recall"].append(trial_metrics["recall"])
+    metrics["ndcg"].append(trial_metrics["ndcg"])
     metrics["precision"].append(trial_metrics["precision"])
-    metrics["f1@k"].append(trial_metrics["f1"])
+    metrics["f1"].append(trial_metrics["f1"])
     metrics["total_indexing_time"].append(trial_metrics["total_indexing_time"])
     metrics["avg_query_time"].append(trial_metrics["query_stats"]["avg_query_time"])
     return metrics
@@ -125,9 +125,9 @@ def run_grid_study(
         "search_method": [],
         "total_indexing_time": [],
         "avg_query_time": [],
-        "recall@k": [],
-        "ndcg@k": [],
-        "f1@k": [],
+        "recall": [],
+        "ndcg": [],
+        "f1": [],
         "precision": [],
         "ret_k": [],
         "algorithm": [],

@@ -1,4 +1,4 @@
-corpus: /Users/tyler.hutcherson/Documents/AppliedAI/redis-retrieval-optimizer/tests/integration/bayes_data/corpus.json
+corpus: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/bayes_data/corpus.json
 embedding_models:
 - dim: 384
   dtype: float32
@@ -33,9 +33,12 @@ optimization_settings:
   - 16
   - 64
   metric_weights:
-    embedding_latency: 1
-    f1_at_k: 1
-    total_indexing_time: 1
+    avg_query_time: 2
+    f1: 2
+    ndcg: 2
+    precision: 2
+    recall: 2
+    total_indexing_time: 2
   n_jobs: 1
   n_trials: 10
   ret_k:
@@ -44,8 +47,8 @@ optimization_settings:
   vector_data_types:
   - float16
   - float32
-qrels: /Users/tyler.hutcherson/Documents/AppliedAI/redis-retrieval-optimizer/tests/integration/bayes_data/qrels.json
-queries: /Users/tyler.hutcherson/Documents/AppliedAI/redis-retrieval-optimizer/tests/integration/bayes_data/queries.json
+qrels: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/bayes_data/qrels.json
+queries: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/bayes_data/queries.json
 search_methods:
 - vector
 - hybrid

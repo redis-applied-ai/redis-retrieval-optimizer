@@ -28,9 +28,9 @@ METRICS: dict = {
     "model": [],
     "model_dim": [],
     "ret_k": [],
-    "recall@k": [],
-    "ndcg@k": [],
-    "f1@k": [],
+    "recall": [],
+    "ndcg": [],
+    "f1": [],
     "precision": [],
     "algorithm": [],
     "ef_construction": [],
@@ -38,6 +38,7 @@ METRICS: dict = {
     "m": [],
     "distance_metric": [],
     "vector_data_type": [],
+    "objective_value": [],
 }
 
 
@@ -52,12 +53,13 @@ def update_metric_row(trial_settings: TrialSettings, trial_metrics: dict):
     METRICS["vector_data_type"].append(trial_settings.index_settings.vector_data_type)
     METRICS["model"].append(trial_settings.embedding.model)
     METRICS["model_dim"].append(trial_settings.embedding.dim)
-    METRICS["recall@k"].append(trial_metrics["recall"])
-    METRICS["ndcg@k"].append(trial_metrics["ndcg"])
+    METRICS["recall"].append(trial_metrics["recall"])
+    METRICS["ndcg"].append(trial_metrics["ndcg"])
     METRICS["precision"].append(trial_metrics["precision"])
-    METRICS["f1@k"].append(trial_metrics["f1"])
+    METRICS["f1"].append(trial_metrics["f1"])
     METRICS["total_indexing_time"].append(trial_metrics["total_indexing_time"])
     METRICS["avg_query_time"].append(trial_metrics["avg_query_time"])
+    METRICS["objective_value"].append(trial_metrics["objective_value"])
 
 
 def persist_metrics(
@@ -70,15 +72,28 @@ def persist_metrics(
     client.json().set(f"study:{study_id}", Path.root_path(), METRICS)
 
 
+def norm_metric(value: float):
+    """Normalize a metric value using 1/(1+value) formula.
+
+    Handles edge cases:
+    - When value is -1, returns a large positive number (infinity equivalent)
+    - When value is very negative, returns a large positive number
+    - When value is very positive, returns a small positive number
+    """
+    if value == -1:
+        # Return a large positive number to represent "infinity" for optimization
+        return 1000.0
+    return 1 / (1 + value)
+
+
 def cost_fn(metrics: dict, weights: dict):
     objective = 0
     for key in metrics:
-        objective += weights.get(key, 0) * metrics[key]
+        if key == "avg_query_time" or key == "total_indexing_time":
+            objective += weights.get(key, 0) * -norm_metric(metrics[key])
+        else:
+            objective += weights.get(key, 0) * metrics[key]
     return objective
-
-
-def norm_metric(value: float):
-    return 1 / (1 + value)
 
 
 def objective(trial, study_config, redis_url, corpus_processor, search_method_map):
@@ -152,19 +167,19 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
     search_method_output = search_fn(search_input)
 
     trial_metrics = utils.eval_trial_metrics(qrels, search_method_output.run)
-    trial_metrics["total_indexing_time"] = -(total_indexing_time)
-    trial_metrics["avg_query_time"] = -(
-        utils.get_query_time_stats(search_method_output.query_metrics.query_times)[
-            "avg_query_time"
-        ]
+    trial_metrics["total_indexing_time"] = total_indexing_time
+    trial_metrics["avg_query_time"] = utils.get_query_time_stats(
+        search_method_output.query_metrics.query_times
+    )["avg_query_time"]
+
+    trial_metrics["objective_value"] = cost_fn(
+        trial_metrics, study_config.optimization_settings.metric_weights.model_dump()
     )
 
     # save results as we go in case of failure
     persist_metrics(redis_url, trial_settings, trial_metrics, study_config.study_id)
 
-    return cost_fn(
-        trial_metrics, study_config.optimization_settings.metric_weights.model_dump()
-    )
+    return trial_metrics["objective_value"]
 
 
 def run_bayes_study(

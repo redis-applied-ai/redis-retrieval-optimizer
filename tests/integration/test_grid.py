@@ -33,7 +33,7 @@ def test_run_grid_study(redis_url):
         study_config["embedding_models"]
     )
 
-    for score in metrics["f1@k"].tolist():
+    for score in metrics["f1"].tolist():
         assert score > 0.0
 
     last_schema = utils.get_last_index_settings(redis_url)

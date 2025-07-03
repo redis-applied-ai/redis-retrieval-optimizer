@@ -85,9 +85,12 @@ class EmbeddingModel(BaseModel):
 
 
 class MetricWeights(BaseModel):
-    f1_at_k: int = 1
-    embedding_latency: int = 1
-    total_indexing_time: int = 1
+    f1: float = 0
+    recall: float = 0
+    ndcg: float = 0
+    precision: float = 0
+    total_indexing_time: float = 0
+    avg_query_time: float = 0
 
 
 class TrialSettings(BaseModel):

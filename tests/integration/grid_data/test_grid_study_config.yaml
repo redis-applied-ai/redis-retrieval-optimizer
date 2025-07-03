@@ -1,4 +1,4 @@
-corpus: /Users/tyler.hutcherson/Documents/AppliedAI/redis-retrieval-optimizer/tests/integration/grid_data/corpus.json
+corpus: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/grid_data/corpus.json
 embedding_models:
 - dim: 384
   embedding_cache_name: vec-cache
@@ -11,8 +11,8 @@ index_settings:
   from_existing: false
   name: test
   vector_dim: 384
-qrels: /Users/tyler.hutcherson/Documents/AppliedAI/redis-retrieval-optimizer/tests/integration/grid_data/qrels.json
-queries: /Users/tyler.hutcherson/Documents/AppliedAI/redis-retrieval-optimizer/tests/integration/grid_data/queries.json
+qrels: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/grid_data/qrels.json
+queries: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/grid_data/queries.json
 search_methods:
 - bm25
 - vector
