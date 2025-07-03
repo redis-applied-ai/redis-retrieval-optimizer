@@ -31,7 +31,7 @@ def test_run_bayes_study(redis_url):
 
     assert metrics.shape[0] == study_config["optimization_settings"]["n_trials"]
 
-    for score in metrics["f1@k"].tolist():
+    for score in metrics["f1"].tolist():
         assert score > 0.0
 
     last_schema = utils.get_last_index_settings(redis_url)
