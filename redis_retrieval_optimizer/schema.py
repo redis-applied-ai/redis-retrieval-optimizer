@@ -139,6 +139,7 @@ class GridStudyConfig(BaseModel):
     embedding_models: list[EmbeddingModel]
     search_methods: list[str]
     ret_k: int = 6
+    vector_data_types: list[str] = ["float32"]  # data types to be included in the study
 
 
 def get_trial_settings(trial, study_config):

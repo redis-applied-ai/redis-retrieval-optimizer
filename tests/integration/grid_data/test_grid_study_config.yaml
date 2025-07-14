@@ -19,3 +19,6 @@ search_methods:
 - hybrid
 - weighted_rrf
 - rerank
+vector_data_types:
+- float16
+- float32

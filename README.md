@@ -114,6 +114,9 @@ embedding_models: # embedding cache would be awesome here.
     embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
 
 search_methods: ["bm25", "vector", "hybrid", "rerank", "weighted_rrf"] # must match what is passed in search_method_map
+
+# data types to be included in the study (optional, defaults to ["float32"])
+vector_data_types: ["float16", "float32"]
 ```
 
 #### Code
