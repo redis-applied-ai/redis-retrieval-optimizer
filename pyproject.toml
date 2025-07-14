@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "redis-retrieval-optimizer"
-version = "0.2.1"
+version = "0.3.0"
 description = "A tool to help optimize information retrieval with the Redis Query Engine."
 authors = [ "Robert Shelton <robert.shelton@redis.com>" ]
 license = "MIT"
