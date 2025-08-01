@@ -60,6 +60,12 @@ def update_metric_row(trial_settings: TrialSettings, trial_metrics: dict):
     METRICS["total_indexing_time"].append(trial_metrics["total_indexing_time"])
     METRICS["avg_query_time"].append(trial_metrics["avg_query_time"])
     METRICS["objective_value"].append(trial_metrics["objective_value"])
+    METRICS["total_index_memory_sz_mb"].append(
+        trial_metrics["memory_stats"]["total_index_memory_sz_mb"]
+    )
+    METRICS["total_object_memory_mb"].append(
+        trial_metrics["memory_stats"]["total_object_memory_mb"]
+    )
 
 
 def persist_metrics(
@@ -135,9 +141,7 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
         logging.info(f"Indexing progress: {trial_index.info()['percent_indexed']}")
 
     # capture index metrics
-    total_indexing_time = round(
-        float(trial_index.info()["total_indexing_time"]) / 1000, 3
-    )
+    total_indexing_time = float(trial_index.info()["total_indexing_time"])
     num_docs = trial_index.info()["num_docs"]
 
     logging.info(f"Data indexed {total_indexing_time=}s, {num_docs=}")
@@ -171,6 +175,9 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
     trial_metrics["avg_query_time"] = utils.get_query_time_stats(
         search_method_output.query_metrics.query_times
     )["avg_query_time"]
+    trial_metrics["memory_stats"] = utils.get_index_memory_stats(
+        trial_index.name, trial_index.prefix, redis_url
+    )
 
     trial_metrics["objective_value"] = cost_fn(
         trial_metrics, study_config.optimization_settings.metric_weights.model_dump()

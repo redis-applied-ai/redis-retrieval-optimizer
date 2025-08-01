@@ -142,6 +142,22 @@ class GridStudyConfig(BaseModel):
     vector_data_types: list[str] = ["float32"]  # data types to be included in the study
 
 
+class SearchStudyConfig(BaseModel):
+    study_id: str = str(uuid4())
+    # existing index name
+    existing_index_name: str
+
+    # data
+    qrels: str
+    queries: str
+
+    search_methods: list[str]
+    ret_k: int = 6
+
+    # embedding model for vector-based search methods (must match index's model)
+    embedding_model: EmbeddingModel
+
+
 def get_trial_settings(trial, study_config):
 
     model_info = trial.suggest_categorical(

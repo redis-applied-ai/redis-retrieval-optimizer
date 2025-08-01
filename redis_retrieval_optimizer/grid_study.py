@@ -40,6 +40,12 @@ def update_metric_row(
     metrics["f1"].append(trial_metrics["f1"])
     metrics["total_indexing_time"].append(trial_metrics["total_indexing_time"])
     metrics["avg_query_time"].append(trial_metrics["query_stats"]["avg_query_time"])
+    metrics["total_index_memory_sz_mb"].append(
+        trial_metrics["memory_stats"]["total_index_memory_sz_mb"]
+    )
+    metrics["total_object_memory_mb"].append(
+        trial_metrics["memory_stats"]["total_object_memory_mb"]
+    )
     return metrics
 
 
@@ -138,6 +144,8 @@ def run_grid_study(
     metrics: dict = {
         "search_method": [],
         "total_indexing_time": [],
+        "total_index_memory_sz_mb": [],
+        "total_object_memory_mb": [],
         "avg_query_time": [],
         "recall": [],
         "ndcg": [],
@@ -217,8 +225,15 @@ def run_grid_study(
                 trial_metrics = utils.eval_trial_metrics(
                     qrels, search_method_output.run
                 )
-                trial_metrics["total_indexing_time"] = round(
-                    float(index.info()["total_indexing_time"]) / 1000, 5
+
+                index_info = index.info()
+
+                trial_metrics["total_indexing_time"] = index_info["total_indexing_time"]
+
+                trial_metrics["memory_stats"] = utils.get_index_memory_stats(
+                    grid_study_config.index_settings.name,
+                    grid_study_config.index_settings.prefix,
+                    redis_url,
                 )
                 trial_metrics["query_stats"] = utils.get_query_time_stats(
                     search_method_output.query_metrics.query_times

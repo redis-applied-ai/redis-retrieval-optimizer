@@ -24,6 +24,7 @@ from redis_retrieval_optimizer.schema import (
     EmbeddingModel,
     GridStudyConfig,
     IndexSettings,
+    SearchStudyConfig,
 )
 
 
@@ -124,6 +125,13 @@ def load_grid_study_config(config_path: str) -> GridStudyConfig:
     return GridStudyConfig(**config)
 
 
+def load_search_study_config(config_path: str) -> SearchStudyConfig:
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+
+    return SearchStudyConfig(**config)
+
+
 def load_json(file_path: str) -> dict:
     with open(file_path, "r") as f:
         data = json.load(f)
@@ -178,6 +186,23 @@ def eval_trial_metrics(qrels: Qrels, run: Run):
     precision = evaluate(qrels, run, metrics=["precision"])
 
     return {"ndcg": ndcg, "recall": recall, "f1": f1, "precision": precision}
+
+
+def get_index_memory_stats(index_name: str, prefix: str, redis_url: str):
+    index = SearchIndex.from_existing(index_name, redis_url=redis_url)
+    index_info = index.info()
+    total_index_memory_sz_mb = index_info["total_index_memory_sz_mb"]
+
+    index_keys = index.client.keys(f"{prefix}*")
+
+    memory_data_bytes = 0
+    for key in index_keys:
+        memory_data_bytes += index.client.memory_usage(key)
+
+    return {
+        "total_index_memory_sz_mb": float(total_index_memory_sz_mb),
+        "total_object_memory_mb": (memory_data_bytes / 1_000_000),
+    }
 
 
 def get_query_time_stats(query_times: list[float]):
