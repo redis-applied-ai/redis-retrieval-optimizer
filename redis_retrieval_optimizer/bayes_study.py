@@ -39,6 +39,7 @@ METRICS: dict = {
     "distance_metric": [],
     "vector_data_type": [],
     "objective_value": [],
+    "total_memory_mb": [],
 }
 
 
@@ -60,12 +61,7 @@ def update_metric_row(trial_settings: TrialSettings, trial_metrics: dict):
     METRICS["total_indexing_time"].append(trial_metrics["total_indexing_time"])
     METRICS["avg_query_time"].append(trial_metrics["avg_query_time"])
     METRICS["objective_value"].append(trial_metrics["objective_value"])
-    METRICS["total_index_memory_sz_mb"].append(
-        trial_metrics["memory_stats"]["total_index_memory_sz_mb"]
-    )
-    METRICS["total_object_memory_mb"].append(
-        trial_metrics["memory_stats"]["total_object_memory_mb"]
-    )
+    METRICS["total_memory_mb"].append(trial_metrics["total_memory_mb"])
 
 
 def persist_metrics(
@@ -175,8 +171,14 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
     trial_metrics["avg_query_time"] = utils.get_query_time_stats(
         search_method_output.query_metrics.query_times
     )["avg_query_time"]
-    trial_metrics["memory_stats"] = utils.get_index_memory_stats(
+
+    memory_stats = utils.get_index_memory_stats(
         trial_index.name, trial_index.prefix, redis_url
+    )
+
+    trial_metrics["total_memory_mb"] = (
+        memory_stats["total_index_memory_sz_mb"]
+        + memory_stats["total_object_memory_mb"]
     )
 
     trial_metrics["objective_value"] = cost_fn(
