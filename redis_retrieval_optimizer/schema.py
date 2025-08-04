@@ -144,10 +144,8 @@ class GridStudyConfig(BaseModel):
 
 class SearchStudyConfig(BaseModel):
     study_id: str = str(uuid4())
-    # existing index name
-    existing_index_name: str
+    index_name: str
 
-    # data
     qrels: str
     queries: str
 

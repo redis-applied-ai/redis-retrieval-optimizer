@@ -4,7 +4,7 @@ embedding_model:
   embedding_cache_name: vec-cache
   model: sentence-transformers/all-MiniLM-L6-v2
   type: hf
-existing_index_name: test-search-index
+index_name: test-search-index
 qrels: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/search_data/qrels.json
 queries: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/search_data/queries.json
 ret_k: 6

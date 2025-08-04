@@ -4,7 +4,7 @@ from redis import Redis
 from redis.commands.json.path import Path
 from redisvl.index import SearchIndex
 
-import redis_retrieval_optimizer.utils as utils
+from redis_retrieval_optimizer import utils as utils
 from redis_retrieval_optimizer.schema import SearchMethodInput, SearchStudyConfig
 from redis_retrieval_optimizer.search_methods import SEARCH_METHOD_MAP
 
@@ -56,9 +56,9 @@ def run_search_study(
     qrels = Qrels(utils.load_json(search_study_config.qrels))
 
     # connect to existing index
-    print(f"Connecting to existing index: {search_study_config.existing_index_name}")
+    print(f"Connecting to existing index: {search_study_config.index_name}")
     index = SearchIndex.from_existing(
-        name=search_study_config.existing_index_name,
+        name=search_study_config.index_name,
         redis_url=redis_url,
     )
     print(f"Connected to index: {index.name} with {index.info()['num_docs']} objects")
@@ -111,7 +111,7 @@ def run_search_study(
         trial_metrics["total_indexing_time"] = index_info["total_indexing_time"]
 
         trial_metrics["memory_stats"] = utils.get_index_memory_stats(
-            search_study_config.existing_index_name,
+            search_study_config.index_name,
             index_info.get("prefix", "ret-opt"),  # Default prefix
             redis_url,
         )

@@ -79,7 +79,7 @@ def test_search_study_requires_embedding_model(redis_url):
 
     config = {
         "study_id": "test-search-study-no-embedding",
-        "existing_index_name": "test-search-index",
+        "index_name": "test-search-index",
         "qrels": f"{TEST_DIR}/search_data/qrels.json",
         "queries": f"{TEST_DIR}/search_data/queries.json",
         "search_methods": ["bm25", "vector"],
