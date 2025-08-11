@@ -69,13 +69,14 @@ For complete code examples, see the following notebooks:
 | Basic grid study | [00_grid_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/grid_study/00_grid_study.ipynb) |
 | Custom grid study | [01_custom_grid_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/grid_study/01_custom_grid_study.ipynb) |
 | Bayesian Optimization | [00_bayes_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/bayesian_optimization/00_bayes_study.ipynb) |
+| Search study | [00_search_study.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/search_study/00_search_study.ipynb) |
 | Embedding model comparison | [00_comparison.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/main/docs/examples/comparison/00_comparison.ipynb) |
 
 ---
 
 ## 🚀 Quick Start
 
-The Retrieval Optimizer supports two *study* types: **Grid** and **Bayesian Optimization**. Each is suited to a different stage of building a high-quality search system.
+The Retrieval Optimizer supports three *study* types: **Grid**, **Bayesian Optimization**, and **Search Study**. Each is suited to a different stage of building a high-quality search system.
 
 ### Grid
 
@@ -84,6 +85,10 @@ Use a grid study to explore the impact of different **embedding models** and **r
 ### Bayesian optimization
 
 Once you've identified a solid starting point, use Bayesian optimization to **fine-tune your index configuration**. This mode intelligently selects the most promising combinations to test, in place of exhaustive testing (which is time-consuming). Bayesian optimization mode is especially useful for balancing **cost, speed, and latency** as you work toward a production-ready solution.
+
+### Search Study
+
+Use a search study when you have an **existing Redis index** and want to quickly test different search methods against it without recreating the index or data. This is ideal for A/B testing search strategies or evaluating custom search methods on production data.
 
 ## Running a Grid study
 
@@ -239,6 +244,68 @@ metrics = run_bayes_study(
 | vector        | hnsw      | float32          | 300              | 50         | 8  | 0.003236       | 2.742                | 0.127207|
 | vector        | hnsw      | float32          | 100              | 50         | 8  | 0.002346       | 3.088                | 0.126233|
 | vector        | hnsw      | float32          | 100              | 50         | 16 | 0.001478       | 1.896                | 0.116203|
+
+---
+
+## Running a Search study
+
+Use a search study when you have an **existing Redis index** and want to quickly test different search methods against it without recreating the index or data. This is ideal for A/B testing search strategies or evaluating custom search methods on production data.
+
+### Search study config
+```yaml
+embedding_model:
+  dim: 768
+  dtype: float32
+  embedding_cache_name: vec-cache
+  model: sentence-transformers/all-mpnet-base-v2
+  type: hf
+index_name: cars
+queries: "../resources/cars/car_queries.json"
+qrels: "../resources/cars/car_qrels.json"
+ret_k: 6
+search_methods:
+- base_vector
+- pre_filter_vector
+study_id: test-search-study
+```
+
+### Code
+```python
+import os
+from redis_retrieval_optimizer.search_study import run_search_study
+from dotenv import load_dotenv
+
+# load environment variables containing necessary credentials
+load_dotenv()
+
+redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
+# Define custom search methods
+def gather_vector_results(search_method_input):
+    # Your vector search implementation
+    pass
+
+def gather_pre_filter_results(search_method_input):
+    # Your pre-filtered search implementation
+    pass
+
+CUSTOM_SEARCH_METHOD_MAP = {
+    "base_vector": gather_vector_results,
+    "pre_filter_vector": gather_pre_filter_results
+}
+
+metrics = run_search_study(
+    config_path="search_study_config.yaml",
+    redis_url=redis_url,
+    search_method_map=CUSTOM_SEARCH_METHOD_MAP
+)
+```
+
+### Example output
+| search_method     | avg_query_time | recall | precision | ndcg   |
+|-------------------|----------------|--------|-----------|---------|
+| base_vector       | 0.002605       | 0.9    | 0.23      | 0.717676|
+| pre_filter_vector | 0.001177       | 1.0    | 0.25      | 0.914903|
 
 ---
 

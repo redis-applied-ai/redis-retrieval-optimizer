@@ -1,0 +1,17 @@
+embedding_model:
+  dim: 384
+  dtype: float32
+  embedding_cache_name: vec-cache
+  model: sentence-transformers/all-MiniLM-L6-v2
+  type: hf
+index_name: test-search-index
+qrels: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/search_data/qrels.json
+queries: /Users/robert.shelton/Documents/redis-retrieval-optimizer/tests/integration/search_data/queries.json
+ret_k: 6
+search_methods:
+- bm25
+- vector
+- hybrid
+- weighted_rrf
+- rerank
+study_id: test-search-study
