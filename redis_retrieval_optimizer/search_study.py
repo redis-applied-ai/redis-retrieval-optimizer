@@ -79,10 +79,11 @@ def run_search_study(
         search_input = SearchMethodInput(
             index=index,
             raw_queries=queries,
-            emb_model=emb_model,  # Provide embedding model for vector-based methods
-            id_field_name="_id",  # Default field names
-            vector_field_name="vector",
-            text_field_name="text",
+            emb_model=emb_model,
+            id_field_name=search_study_config.id_field_name,
+            vector_field_name=search_study_config.vector_field_name,
+            text_field_name=search_study_config.text_field_name,
+            ret_k=search_study_config.ret_k,
         )
 
         search_method_output = search_fn(search_input)

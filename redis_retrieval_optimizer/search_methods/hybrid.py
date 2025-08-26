@@ -75,7 +75,7 @@ def gather_hybrid_results(
             hybrid_query = gen_hybrid_query(
                 emb_model=search_method_input.emb_model,
                 user_query=text_query,
-                num_results=10,  # TODO make this configurable
+                num_results=search_method_input.ret_k,
                 vector_field_name=search_method_input.vector_field_name,
                 text_field_name=search_method_input.text_field_name,
                 id_field_name=search_method_input.id_field_name,
