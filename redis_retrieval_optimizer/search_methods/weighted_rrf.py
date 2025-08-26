@@ -39,7 +39,7 @@ def weighted_rrf(
     user_query: str,
     alpha: float = 0.5,
     num_results: int = 4,
-    k: int = 60,
+    k: int = 20,
     id_field_name: str = "_id",
 ) -> List[Dict[str, Any]]:
     """Implemented client-side RRF after querying from Redis."""
@@ -81,7 +81,7 @@ def gather_weighted_rrf(search_method_input: SearchMethodInput) -> SearchMethodO
                 search_method_input.index,
                 search_method_input.emb_model,
                 text_query,
-                num_results=10,  # TODO make this configurable
+                num_results=search_method_input.ret_k,
                 k=20,  # TODO make this configurable
                 id_field_name=search_method_input.id_field_name,
             )

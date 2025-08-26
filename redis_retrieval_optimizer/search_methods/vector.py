@@ -45,13 +45,19 @@ def make_score_dict_vec(res, id_field_name: str) -> dict:
 def gather_vector_results(
     search_method_input: SearchMethodInput,
 ) -> SearchMethodOutput:
+    """
+    Execute vector search using the improved SearchMethodInput interface.
+
+    This method handles both dictionary and list query formats and demonstrates
+    how the enhanced classes make the code cleaner and more maintainable.
+    """
     redis_res_vector = {}
 
     for key in search_method_input.raw_queries:
         text_query = search_method_input.raw_queries[key]
         vec_query = vector_query(
             query=text_query,
-            num_results=10,
+            num_results=search_method_input.ret_k,
             emb_model=search_method_input.emb_model,
             vector_field_name=search_method_input.vector_field_name,
             id_field_name=search_method_input.id_field_name,

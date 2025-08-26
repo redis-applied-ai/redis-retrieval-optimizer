@@ -7,7 +7,7 @@ embedding_model:
 index_name: cars
 queries: "../resources/cars/car_queries.json"
 qrels: "../resources/cars/car_qrels.json"
-ret_k: 6
+ret_k: 3
 search_methods:
 - base_vector
 - pre_filter_vector

@@ -20,12 +20,12 @@ def rerank(
 ) -> List[Dict[str, Any]]:
     """Rerank the candidates based on the user query with an external model/module."""
 
-    # Create the vector query
-    vector_query = vector_query_filter(emb_model, user_query, num_results=num_results)
+    # Create the vector query default larger set that is pruned down to ret_k
+    vector_query = vector_query_filter(emb_model, user_query, num_results=20)
 
-    # Create the full-text query
+    # Create the full-text query default larger set that is pruned down to ret_k
     full_text_query = bm25_query_optional(
-        text_field_name, id_field_name, user_query, num_results=num_results
+        text_field_name, id_field_name, user_query, num_results=20
     )
 
     # Run queries individually
@@ -78,7 +78,7 @@ def gather_rerank_results(search_method_input: SearchMethodInput):
                 reranker,
                 search_method_input.emb_model,
                 text_query,
-                num_results=10,  # TODO make this configurable
+                num_results=search_method_input.ret_k,
                 text_field_name=search_method_input.text_field_name,
                 id_field_name=search_method_input.id_field_name,
             )

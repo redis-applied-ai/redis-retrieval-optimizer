@@ -250,7 +250,7 @@ def gather_bm25_results(search_method_input: SearchMethodInput) -> SearchMethodO
         full_text_query = TextQuery(
             text=text_query,
             text_field_name=search_method_input.text_field_name,
-            num_results=10,  # TODO make this configurable
+            num_results=search_method_input.ret_k,
             text_scorer="BM25STD",
         )
         try:
