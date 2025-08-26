@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, Union
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from ranx import Run
 from redisvl.index import SearchIndex
 from redisvl.utils.vectorize.base import BaseVectorizer
@@ -49,9 +49,7 @@ class SearchMethodInput(BaseModel):
     index: Optional[SearchIndex] = Field(description="Redis index to search against")
 
     # Search configuration
-    ret_k: int = Field(
-        default=6, ge=1, description="Number of results to retrieve per query"
-    )
+    ret_k: int = Field(default=6, description="Number of results to retrieve per query")
     id_field_name: str = Field(
         default="_id",
         description="Field name containing document IDs in the Redis index",

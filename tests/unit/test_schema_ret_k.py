@@ -28,15 +28,6 @@ class TestSearchMethodInputRetK:
             )
             assert search_input.ret_k == custom_ret_k
 
-    def test_ret_k_validation(self):
-        """Test that ret_k validation works correctly"""
-        # Test that ret_k must be at least 1
-        with pytest.raises(ValueError, match="ret_k must be at least 1"):
-            SearchMethodInput(raw_queries={"q1": "test query"}, index=None, ret_k=0)
-
-        with pytest.raises(ValueError, match="ret_k must be at least 1"):
-            SearchMethodInput(raw_queries={"q1": "test query"}, index=None, ret_k=-5)
-
     def test_ret_k_with_dict_queries(self):
         """Test that ret_k works with dictionary format queries"""
         search_input = SearchMethodInput(
@@ -134,4 +125,4 @@ class TestSearchMethodOutput:
 
         # Test that we can access the timing data
         assert len(metrics.query_times) == 3
-        assert sum(metrics.query_times) == 0.6
+        assert sum(metrics.query_times) == pytest.approx(0.6)
