@@ -112,11 +112,15 @@ def init_index_from_grid_settings(
             # corpus processing functions should be user defined
             corpus_data = corpus_processor(corpus, emb_model)
 
+            indexing_start_time = time.time()
             index.load(corpus_data)
 
             while float(index.info()["percent_indexed"]) < 1:
                 time.sleep(1)
                 logging.info(f"Indexing progress: {index.info()['percent_indexed']}")
+
+            total_indexing_time = time.time() - indexing_start_time
+            utils.set_last_indexing_time(redis_url, total_indexing_time)
 
         index_settings["embedding"] = embed_settings.model_dump()
         utils.set_last_index_settings(redis_url, index_settings)
@@ -188,6 +192,7 @@ def run_grid_study(
 
                 # corpus processing functions should be user defined
                 corpus_data = corpus_processor(corpus, emb_model)
+                indexing_start_time = time.time()
                 index.load(corpus_data)
 
                 while float(index.info()["percent_indexed"]) < 1:
@@ -195,6 +200,9 @@ def run_grid_study(
                     logging.info(
                         f"Indexing progress: {index.info()['percent_indexed']}"
                     )
+
+                total_indexing_time = time.time() - indexing_start_time
+                utils.set_last_indexing_time(redis_url, total_indexing_time)
 
             # Get embedding model with current dtype
             emb_model = utils.get_embedding_model(
@@ -220,9 +228,11 @@ def run_grid_study(
                     qrels, search_method_output.run
                 )
 
-                index_info = index.info()
+                last_indexing_time = utils.get_last_indexing_time(redis_url)
 
-                trial_metrics["total_indexing_time"] = index_info["total_indexing_time"]
+                trial_metrics["total_indexing_time"] = (
+                    last_indexing_time if last_indexing_time is not None else 0.0
+                )
 
                 memory_stats = utils.get_index_memory_stats(
                     grid_study_config.index_settings.name,

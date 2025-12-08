@@ -178,7 +178,7 @@ optimization_settings:
   # defines weight of each metric in optimization function
   metric_weights:
     f1: 1
-    total_indexing_time: 1
+    total_indexing_time: 1  # weight for total indexing time (seconds to reach 100% indexed)
   algorithms: ["hnsw"] # indexing algorithm to be included in the study
   vector_data_types: ["float16", "float32"] # data types to be included in the study
   distance_metrics: ["cosine"] # distance metrics to be included in the study
@@ -201,6 +201,12 @@ embedding_models:
     dtype: "float32"
 
 ```
+
+The `total_indexing_time` metric is measured in **seconds** using wall-clock time
+from when indexing starts until Redis reports `percent_indexed == 1`. When a
+study reuses an existing index without reloading data, the previously measured
+indexing time is reused instead of querying `index.info()["total_indexing_time"]`.
+
 
 #### Code
 ```python

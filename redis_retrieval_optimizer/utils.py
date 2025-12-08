@@ -69,6 +69,27 @@ def set_last_index_settings(redis_url, index_settings):
     client.json().set("ret-opt:last_schema", Path.root_path(), index_settings)
 
 
+def get_last_indexing_time(redis_url: str) -> float | None:
+    """Return the last recorded total indexing time in seconds, if any.
+
+    This is stored under a dedicated JSON key so we can reuse the
+    indexing time across runs where we do not reload data.
+    """
+    client = Redis.from_url(redis_url)
+    value = client.json().get("ret-opt:last_indexing_time")
+    return float(value) if value is not None else None
+
+
+def set_last_indexing_time(redis_url: str, indexing_time: float) -> None:
+    """Persist the total indexing time (in seconds) for the current index.
+
+    This is used when subsequent runs reuse the existing indexed data
+    and therefore should reuse the previously measured indexing time.
+    """
+    client = Redis.from_url(redis_url)
+    client.json().set("ret-opt:last_indexing_time", Path.root_path(), indexing_time)
+
+
 def check_recreate(index_settings, last_index_settings):
     embedding_settings = index_settings.pop("embedding") if index_settings else None
     last_embedding_settings = (

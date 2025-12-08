@@ -122,6 +122,8 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
         dtype=trial_settings.index_settings.vector_data_type,
     )
 
+    indexing_start_time = None
+
     if recreate_data:
         logging.info("Recreating index...")
         corpus = utils.load_json(study_config.corpus)
@@ -129,15 +131,24 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
         corpus_size = len(corpus_data)
         logging.info(f"Corpus size: {corpus_size}")
 
-        # reload data
+        # reload data and measure wall-clock time until indexing completes
+        indexing_start_time = time.time()
         trial_index.load(corpus_data)
 
     while float(trial_index.info()["percent_indexed"]) < 1:
         time.sleep(1)
         logging.info(f"Indexing progress: {trial_index.info()['percent_indexed']}")
 
-    # capture index metrics
-    total_indexing_time = float(trial_index.info()["total_indexing_time"])
+    if recreate_data:
+        assert indexing_start_time is not None
+        total_indexing_time = time.time() - indexing_start_time
+        utils.set_last_indexing_time(redis_url, total_indexing_time)
+    else:
+        last_indexing_time = utils.get_last_indexing_time(redis_url)
+        total_indexing_time = (
+            last_indexing_time if last_indexing_time is not None else 0.0
+        )
+
     num_docs = trial_index.info()["num_docs"]
 
     logging.info(f"Data indexed {total_indexing_time=}s, {num_docs=}")
