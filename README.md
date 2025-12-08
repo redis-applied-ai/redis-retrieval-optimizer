@@ -449,7 +449,7 @@ optimizer = CacheThresholdOptimizer(cache, test_data, eval_metric="precision") #
 optimizer = CacheThresholdOptimizer(cache, test_data, eval_metric="recall")    # Recall
 ```
 
-For complete documentation and examples, see [docs/examples/threshold_optimization](docs/examples/threshold_optimization/).
+For a complete example, see [docs/examples/threshold_optimization/00_threshold_optimization.ipynb](https://github.com/redis-applied-ai/redis-retrieval-optimizer/blob/1be3e2683a301a6bebe298ec8d126b7429701bc9/docs/examples/threshold_optimization/00_threshold_optimization.ipynb).
 
 ## 🔧 Custom Processors and Search Methods
 
