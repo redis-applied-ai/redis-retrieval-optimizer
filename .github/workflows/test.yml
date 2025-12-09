@@ -12,7 +12,7 @@ jobs:
 
     services:
       redis:
-        image: redis/redis-stack:latest
+        image: ${{ matrix.redis-image }}
         ports:
           - 6379:6379
         options: >-
@@ -24,6 +24,12 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.12"]
+        redis-version: ["latest", "8.4.0"]
+        include:
+          - redis-version: "latest"
+            redis-image: redis/redis-stack:latest
+          - redis-version: "8.4.0"
+            redis-image: redis:8.4.0
 
     steps:
       - uses: actions/checkout@v4
