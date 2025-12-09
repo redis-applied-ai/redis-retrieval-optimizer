@@ -11,7 +11,7 @@ def vector_query_filter(
     emb_model, user_query: str, num_results: int, filters=None
 ) -> VectorQuery:
     """Generate a Redis vector query given user query string."""
-    vector = emb_model.embed(user_query, as_buffer=True, dtype="float32")
+    vector = emb_model.embed(user_query, as_buffer=True)
     query = VectorQuery(
         vector=vector,
         vector_field_name="vector",
@@ -35,7 +35,7 @@ def gen_hybrid_query(
 ) -> HybridQuery:
     """Generate a Redis vector query given user query string."""
 
-    vector = emb_model.embed(user_query, as_buffer=True, dtype="float32")
+    vector = emb_model.embed(user_query, as_buffer=True)
 
     query = HybridQuery(
         text=user_query,
