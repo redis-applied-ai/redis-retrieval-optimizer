@@ -1,7 +1,7 @@
 .PHONY: install format lint test clean redis-start redis-stop check-types check
 
 install:
-	poetry install --all-extras
+	uv sync
 
 redis-start:
 	docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
@@ -10,16 +10,16 @@ redis-stop:
 	docker stop redis-stack
 
 format:
-	poetry run format
-	poetry run sort-imports
+	uv run format
+	uv run sort-imports
 
 check-types:
-	poetry run check-mypy
+	uv run check-mypy
 
 lint: format check-types
-	
+
 test:
-	poetry run test
+	uv run test
 
 check: lint test
 
