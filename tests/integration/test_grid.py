@@ -1,5 +1,6 @@
 import os
 
+import pytest
 import yaml
 from redisvl.index import SearchIndex
 
@@ -44,6 +45,19 @@ def test_run_grid_study(redis_url):
     for score in metrics["f1"].tolist():
         assert score > 0.0
 
+    # total_indexing_time should be recorded and reused across trials
+    assert "total_indexing_time" in metrics.columns
+
+    # With a single vector data type, all trials should share the same
+    # positive indexing time value.
+    unique_times = metrics["total_indexing_time"].unique()
+    assert len(unique_times) == 1
+    assert unique_times[0] > 0.0
+
+    last_indexing_time = utils.get_last_indexing_time(redis_url)
+    assert last_indexing_time is not None
+    assert unique_times[0] == pytest.approx(last_indexing_time)
+
     last_schema = utils.get_last_index_settings(redis_url)
     assert last_schema is not None
 
@@ -53,6 +67,7 @@ def test_run_grid_study(redis_url):
 
     # clean up
     index.client.json().delete("ret-opt:last_schema")
+    index.client.json().delete("ret-opt:last_indexing_time")
     index.delete(drop=True)
 
 
@@ -96,6 +111,17 @@ def test_run_grid_study_with_multiple_dtypes(redis_url):
     for score in metrics["f1"].tolist():
         assert score > 0.0
 
+    # total_indexing_time should be recorded for each dtype and reused
+    # across search methods for that dtype.
+    assert "total_indexing_time" in metrics.columns
+
+    for dtype in unique_dtypes:
+        dtype_times = metrics.loc[
+            metrics["vector_data_type"] == dtype, "total_indexing_time"
+        ]
+        assert dtype_times.nunique() == 1
+        assert dtype_times.iloc[0] > 0.0
+
     last_schema = utils.get_last_index_settings(redis_url)
     assert last_schema is not None
 
@@ -105,4 +131,5 @@ def test_run_grid_study_with_multiple_dtypes(redis_url):
 
     # clean up
     index.client.json().delete("ret-opt:last_schema")
+    index.client.json().delete("ret-opt:last_indexing_time")
     index.delete(drop=True)
