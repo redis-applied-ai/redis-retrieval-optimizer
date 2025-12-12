@@ -34,7 +34,7 @@ def gather_hybrid_8_4_results(
 
             hybrid_query = HybridQuery(
                 text=text_query,
-                text_field_name="description",
+                text_field_name=search_method_input.text_field_name,
                 vector=vector,
                 vector_field_name=search_method_input.vector_field_name,
                 text_scorer="BM25STD",
