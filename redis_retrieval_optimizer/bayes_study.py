@@ -134,9 +134,15 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
         indexing_start_time = time.time()
         trial_index.load(corpus_data)
 
-    while float(trial_index.info()["percent_indexed"]) < 1:
-        time.sleep(1)
-        logging.info(f"Indexing progress: {trial_index.info()['percent_indexed']}")
+        while float(trial_index.info()["percent_indexed"]) < 1:
+            time.sleep(1)
+            logging.info(f"Indexing progress: {trial_index.info()['percent_indexed']}")
+    else:
+        # Only wait if index is not fully indexed
+        if float(trial_index.info()["percent_indexed"]) < 1:
+            while float(trial_index.info()["percent_indexed"]) < 1:
+                time.sleep(1)
+                logging.info(f"Indexing progress: {trial_index.info()['percent_indexed']}")
 
     if recreate_data:
         assert indexing_start_time is not None
