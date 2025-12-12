@@ -22,7 +22,7 @@ jobs:
           enable-cache: true
 
       - name: Sync dependencies
-	    run: uv sync --no-dev
+        run: uv sync --no-dev
 
       - name: Build package
         run: uv build
