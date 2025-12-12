@@ -122,7 +122,6 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
         dtype=trial_settings.index_settings.vector_data_type,
     )
 
-    indexing_start_time = None
 
     if recreate_data:
         logging.info("Recreating index...")
