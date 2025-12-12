@@ -1,7 +1,8 @@
 import os
 
 from ranx import Run
-from redisvl.query import HybridQuery, VectorQuery
+from redisvl.query import VectorQuery
+from redisvl.query.aggregate import AggregateHybridQuery
 
 from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.base import run_search_w_time
@@ -32,12 +33,12 @@ def gen_hybrid_query(
     vector_field_name: str = "vector",
     text_field_name: str = "text",
     id_field_name: str = "_id",
-) -> HybridQuery:
+) -> AggregateHybridQuery:
     """Generate a Redis vector query given user query string."""
 
     vector = emb_model.embed(user_query, as_buffer=True)
 
-    query = HybridQuery(
+    query = AggregateHybridQuery(
         text=user_query,
         text_field_name=text_field_name,
         vector=vector,

@@ -1,7 +1,7 @@
 import os
 
 from ranx import Run
-from redisvl.query import FilterQuery, HybridQuery, TextQuery
+from redisvl.query import FilterQuery, TextQuery
 from redisvl.query.filter import Text
 from redisvl.utils.token_escaper import TokenEscaper
 

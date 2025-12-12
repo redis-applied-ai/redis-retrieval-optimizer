@@ -14,3 +14,13 @@ def run_search_w_time(
     query_time = time.time() - start_time
     query_metrics.query_times.append(query_time)
     return res
+
+
+def run_search_w_time_hybrid(
+    index: SearchIndex, query: BaseQuery, query_metrics: QueryMetrics
+) -> tuple:
+    start_time = time.time()
+    res = index.hybrid_search(query)
+    query_time = time.time() - start_time
+    query_metrics.query_times.append(query_time)
+    return res

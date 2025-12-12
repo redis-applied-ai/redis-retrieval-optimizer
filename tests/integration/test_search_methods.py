@@ -333,3 +333,37 @@ def test_gather_weighted_rrf_results(vector_index, test_data):
     f1 = evaluate(qrels, result.run, metrics=["f1"])
 
     assert f1 > 0
+
+
+def test_gather_hybrid_8_4_results(vector_index, test_data):
+    """Test the gather_hybrid_results function with real Redis index."""
+    index, emb_model = vector_index
+    _, queries, qrels = test_data
+
+    # Create input for gather_hybrid_results
+    query_metrics = QueryMetrics()
+    search_input = SearchMethodInput(
+        index=index,
+        raw_queries=queries,
+        emb_model=emb_model,  # Lin combo uses both text and embeddings
+        query_metrics=query_metrics,
+    )
+
+    # Import the hybrid function
+    from redis_retrieval_optimizer.search_methods.hybrid_8_4 import (
+        gather_hybrid_8_4_results,
+    )
+
+    # Execute search
+    result = gather_hybrid_8_4_results(search_input)
+
+    # Verify results
+    assert result is not None
+    assert isinstance(result.run, Run)
+
+    # Check that query metrics were collected
+    assert len(result.query_metrics.query_times) == len(queries)
+
+    f1 = evaluate(qrels, result.run, metrics=["f1"])
+
+    assert f1 > 0
