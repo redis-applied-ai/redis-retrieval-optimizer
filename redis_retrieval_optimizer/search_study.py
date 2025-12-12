@@ -90,7 +90,10 @@ def run_search_study(
 
         trial_metrics = utils.eval_trial_metrics(qrels, search_method_output.run)
 
-        trial_metrics["total_indexing_time"] = index_info["total_indexing_time"]
+        last_indexing_time = utils.get_last_indexing_time(redis_url)
+        trial_metrics["total_indexing_time"] = (
+            last_indexing_time if last_indexing_time is not None else 0.0
+        )
 
         memory_stats = utils.get_index_memory_stats(
             search_study_config.index_name,

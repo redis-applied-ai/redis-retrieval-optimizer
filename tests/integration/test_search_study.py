@@ -1,5 +1,7 @@
 import os
+import time
 
+import pytest
 import yaml
 from redisvl.index import SearchIndex
 from redisvl.utils.vectorize.text.huggingface import HFTextVectorizer
@@ -38,13 +40,19 @@ def test_run_search_study(redis_url):
     # Load corpus data
     corpus = utils.load_json(f"{TEST_DIR}/search_data/corpus.json")
     corpus_data = eval_beir.process_corpus(corpus, emb_model)
+    indexing_start_time = time.time()
     index.load(corpus_data)
 
     # Wait for indexing to complete
     while float(index.info()["percent_indexed"]) < 1:
-        import time
-
         time.sleep(1)
+
+    total_indexing_time = time.time() - indexing_start_time
+    # Sanity check: indexing time should be positive for a small test corpus.
+    assert total_indexing_time > 0.0
+
+    # Persist the measured indexing time so search_study can reuse it.
+    utils.set_last_indexing_time(redis_url, total_indexing_time)
 
     # Run search study
     metrics = run_search_study(
@@ -57,6 +65,13 @@ def test_run_search_study(redis_url):
 
     assert metrics.shape[0] == expected_trials
 
+    # total_indexing_time should be present and match the value we measured.
+    assert "total_indexing_time" in metrics.columns
+
+    unique_indexing_times = metrics["total_indexing_time"].unique()
+    assert len(unique_indexing_times) == 1
+    assert unique_indexing_times[0] == pytest.approx(total_indexing_time)
+
     for score in metrics["f1"].tolist():
         assert score > 0.0
 
@@ -67,13 +82,12 @@ def test_run_search_study(redis_url):
         assert method in unique_methods
 
     # Clean up
+    index.client.json().delete("ret-opt:last_indexing_time")
     index.delete(drop=True)
 
 
 def test_search_study_requires_embedding_model(redis_url):
     """Test that search study requires embedding_model in config."""
-    import pytest
-
     # Create a config without embedding_model
     config_path = f"{TEST_DIR}/search_data/test_search_study_config_no_embedding.yaml"
 

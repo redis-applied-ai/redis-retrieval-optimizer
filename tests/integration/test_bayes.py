@@ -1,5 +1,6 @@
 import os
 
+import pytest
 import yaml
 from redisvl.index import SearchIndex
 
@@ -31,6 +32,16 @@ def test_run_bayes_study(redis_url):
 
     assert metrics.shape[0] == study_config["optimization_settings"]["n_trials"]
 
+    # total_indexing_time should be recorded for each trial and persisted
+    assert "total_indexing_time" in metrics.columns
+
+    last_indexing_time = utils.get_last_indexing_time(redis_url)
+    assert last_indexing_time is not None
+    assert last_indexing_time > 0.0
+
+    # The last trial's recorded indexing time should match the persisted value
+    assert metrics["total_indexing_time"].iloc[-1] == pytest.approx(last_indexing_time)
+
     for score in metrics["f1"].tolist():
         assert score > 0.0
 
@@ -43,4 +54,5 @@ def test_run_bayes_study(redis_url):
 
     # clean up
     index.client.json().delete("ret-opt:last_schema")
+    index.client.json().delete("ret-opt:last_indexing_time")
     index.delete(drop=True)
