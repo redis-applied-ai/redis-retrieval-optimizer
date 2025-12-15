@@ -16,6 +16,7 @@ def run_search_w_time(
     return res
 
 
+# TODO: this will become unnecessary
 def run_search_w_time_hybrid(
     index: SearchIndex, query: BaseQuery, query_metrics: QueryMetrics
 ) -> tuple:
