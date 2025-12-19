@@ -1,10 +1,13 @@
-import os
+import logging
 
 from ranx import Run
-from redisvl.query import HybridQuery, VectorQuery
+from redisvl.query import VectorQuery
+from redisvl.query.aggregate import AggregateHybridQuery
 
 from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.base import run_search_w_time
+
+logger = logging.getLogger(__name__)
 
 
 def vector_query_filter(
@@ -32,12 +35,12 @@ def gen_hybrid_query(
     vector_field_name: str = "vector",
     text_field_name: str = "text",
     id_field_name: str = "_id",
-) -> HybridQuery:
+) -> AggregateHybridQuery:
     """Generate a Redis vector query given user query string."""
 
     vector = emb_model.embed(user_query, as_buffer=True)
 
-    query = HybridQuery(
+    query = AggregateHybridQuery(
         text=user_query,
         text_field_name=text_field_name,
         vector=vector,
@@ -87,7 +90,7 @@ def gather_hybrid_results(
             )
             score_dict = hybrid_scores_dict(res, search_method_input.id_field_name)
         except Exception as e:
-            print(f"failed for {key}, {text_query}")
+            logger.exception(f"Hybrid search failed for {key=}, {text_query=} \n {e=}")
             score_dict = {"no_match": 0}
         redis_res_hybrid[key] = score_dict
 

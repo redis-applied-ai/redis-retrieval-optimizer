@@ -1,3 +1,4 @@
+import logging
 import random
 from typing import Any, Callable, Dict, List
 
@@ -14,6 +15,8 @@ from redis_retrieval_optimizer.threshold_optimization.utils import (
     NULL_RESPONSE_KEY,
     _format_qrels,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _generate_run_router(test_data: List[LabeledData], router: SemanticRouter) -> "Run":
@@ -103,8 +106,12 @@ def _random_search_opt_router(
             best_score = score
             best_thresholds = thresholds
 
-    print(
-        f"Eval metric {eval_metric.value.upper()}: start {round(start_score, 3)}, end {round(best_score, 3)} \nEnding thresholds: {router.route_thresholds}"
+    logger.info(
+        "Eval metric %s: start %.3f, end %.3f. Ending thresholds: %s",
+        eval_metric.value.upper(),
+        round(start_score, 3),
+        round(best_score, 3),
+        router.route_thresholds,
     )
     router.update_route_thresholds(best_thresholds)
 

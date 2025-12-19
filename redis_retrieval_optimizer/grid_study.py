@@ -13,6 +13,8 @@ import redis_retrieval_optimizer.utils as utils
 from redis_retrieval_optimizer.schema import GridStudyConfig, SearchMethodInput
 from redis_retrieval_optimizer.search_methods import SEARCH_METHOD_MAP
 
+logger = logging.getLogger(__name__)
+
 
 def update_metric_row(
     metrics,
@@ -107,7 +109,7 @@ def init_index_from_grid_settings(
             emb_model = utils.get_embedding_model(
                 grid_study_config.embedding_models[0], redis_url, dtype=dtype
             )
-            print("Recreating: loading corpus from file")
+            logger.info("Recreating: loading corpus from file")
             corpus = utils.load_json(grid_study_config.corpus)
             # corpus processing functions should be user defined
             corpus_data = corpus_processor(corpus, emb_model)
@@ -174,7 +176,7 @@ def run_grid_study(
                 )
             else:
                 # Recreate index with new settings
-                print(f"Recreating index with dtype: {dtype}")
+                logger.info("Recreating index with dtype: %s", dtype)
 
                 # Update index settings for current embedding model and dtype
                 current_index_settings.vector_dim = embedding_model.dim
@@ -184,7 +186,7 @@ def run_grid_study(
                     schema, redis_url, recreate_index=True, recreate_data=True
                 )
 
-                print("Recreating: loading corpus from file")
+                logger.info("Recreating: loading corpus from file")
                 emb_model = utils.get_embedding_model(
                     embedding_model, redis_url, dtype=dtype
                 )
@@ -210,7 +212,9 @@ def run_grid_study(
             )
 
             for search_method in grid_study_config.search_methods:
-                print(f"Running search method: {search_method} with dtype: {dtype}")
+                logger.info(
+                    "Running search method: %s with dtype: %s", search_method, dtype
+                )
                 # get search method to try
                 search_fn = search_method_map[search_method]
                 search_input = SearchMethodInput(

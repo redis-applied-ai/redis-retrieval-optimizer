@@ -1,4 +1,4 @@
-import os
+import logging
 import time
 from typing import Any, Dict, List
 
@@ -7,6 +7,8 @@ from ranx import Run
 from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.bm25 import bm25_query_optional
 from redis_retrieval_optimizer.search_methods.hybrid import vector_query_filter
+
+logger = logging.getLogger(__name__)
 
 
 def fuse_rankings_rrf(*ranked_lists, weights=None, k=60):
@@ -75,8 +77,8 @@ def gather_weighted_rrf(search_method_input: SearchMethodInput) -> SearchMethodO
 
     for key in search_method_input.raw_queries:
         text_query = search_method_input.raw_queries[key]
+        start = time.time()
         try:
-            start = time.time()
             w_rff = weighted_rrf(
                 search_method_input.index,
                 search_method_input.emb_model,
@@ -85,12 +87,15 @@ def gather_weighted_rrf(search_method_input: SearchMethodInput) -> SearchMethodO
                 k=20,  # TODO make this configurable
                 id_field_name=search_method_input.id_field_name,
             )
-            query_time = time.time() - start
-            search_method_input.query_metrics.query_times.append(query_time)
             scores_dict = make_score_dict_w_rff(w_rff)
         except Exception as e:
-            print(f"failed for {key}, {text_query}, error: {e}")
+            logger.exception(
+                f"Weighted RRF search failed for {key=}, {text_query=} \n {e=}"
+            )
             scores_dict = {"no_match": 0}
+        finally:
+            query_time = time.time() - start
+            search_method_input.query_metrics.query_times.append(query_time)
 
         redis_res_w_rrf[key] = scores_dict
 

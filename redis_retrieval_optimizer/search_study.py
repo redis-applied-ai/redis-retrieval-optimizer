@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 from ranx import Qrels
 from redis import Redis
@@ -7,6 +9,8 @@ from redisvl.index import SearchIndex
 from redis_retrieval_optimizer import utils as utils
 from redis_retrieval_optimizer.schema import SearchMethodInput
 from redis_retrieval_optimizer.search_methods import SEARCH_METHOD_MAP
+
+logger = logging.getLogger(__name__)
 
 
 def update_search_metric_row(
@@ -44,12 +48,16 @@ def run_search_study(
     qrels = Qrels(utils.load_json(search_study_config.qrels))
 
     # connect to existing index
-    print(f"Connecting to existing index: {search_study_config.index_name}")
+    logger.info("Connecting to existing index: %s", search_study_config.index_name)
     index = SearchIndex.from_existing(
         name=search_study_config.index_name,
         redis_url=redis_url,
     )
-    print(f"Connected to index: {index.name} with {index.info()['num_docs']} objects")
+    logger.info(
+        "Connected to index: %s with %s objects",
+        index.name,
+        index.info()["num_docs"],
+    )
 
     # Get index info for metrics
     index_info = index.info()
@@ -72,7 +80,7 @@ def run_search_study(
     }
 
     for search_method in search_study_config.search_methods:
-        print(f"Running search method: {search_method}")
+        logger.info("Running search method: %s", search_method)
 
         # get search method to try
         search_fn = search_method_map[search_method]

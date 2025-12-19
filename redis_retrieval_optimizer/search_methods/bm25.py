@@ -1,12 +1,14 @@
-import os
+import logging
 
 from ranx import Run
-from redisvl.query import FilterQuery, HybridQuery, TextQuery
+from redisvl.query import FilterQuery, TextQuery
 from redisvl.query.filter import Text
 from redisvl.utils.token_escaper import TokenEscaper
 
 from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
 from redis_retrieval_optimizer.search_methods.base import run_search_w_time
+
+logger = logging.getLogger(__name__)
 
 STOPWORDS_EN = set(
     [
@@ -263,8 +265,8 @@ def gather_bm25_results(search_method_input: SearchMethodInput) -> SearchMethodO
                 res, id_field_name=search_method_input.id_field_name
             )
         except Exception as e:
-            print(f"failed for {key}, {text_query}: error: {e}")
-            score_dict = {}
+            logger.exception(f"BM25 search failed for {key=}, {text_query=} \n {e=}")
+            score_dict = {"no_match": 0}
         redis_res_bm25[key] = score_dict
 
     return SearchMethodOutput(

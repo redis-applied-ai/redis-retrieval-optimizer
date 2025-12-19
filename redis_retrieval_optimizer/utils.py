@@ -102,7 +102,17 @@ def check_recreate(index_settings, last_index_settings):
     elif index_settings != last_index_settings:
         recreate_index = True
 
-        if embedding_settings != last_embedding_settings:
+        # Check if vector_data_type changed - this requires data recreation
+        # because vectors must be re-embedded with the new dtype
+        current_dtype = (
+            index_settings.get("vector_data_type") if index_settings else None
+        )
+        last_dtype = (
+            last_index_settings.get("vector_data_type") if last_index_settings else None
+        )
+        dtype_changed = current_dtype != last_dtype
+
+        if embedding_settings != last_embedding_settings or dtype_changed:
             recreate_data = True
         else:
             recreate_data = False
@@ -232,10 +242,18 @@ def get_query_time_stats(query_times: list[float]):
     """
     import numpy as np
 
-    avg_query_time = np.mean(query_times)
-    std_query_time = np.std(query_times)
-    min_query_time = np.min(query_times)
-    max_query_time = np.max(query_times)
+    if not query_times:
+        return {
+            "avg_query_time": 0.0,
+            "std_query_time": 0.0,
+            "min_query_time": 0.0,
+            "max_query_time": 0.0,
+        }
+
+    avg_query_time = float(np.mean(query_times))
+    std_query_time = float(np.std(query_times))
+    min_query_time = float(np.min(query_times))
+    max_query_time = float(np.max(query_times))
 
     return {
         "avg_query_time": avg_query_time,
