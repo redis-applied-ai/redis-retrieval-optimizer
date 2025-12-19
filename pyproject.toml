@@ -1,6 +1,6 @@
 [project]
 name = "redis-retrieval-optimizer"
-version = "0.4.3"
+version = "0.4.4"
 description = "A tool to help optimize information retrieval with the Redis Query Engine."
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
@@ -10,7 +10,7 @@ authors = [
 ]
 
 dependencies = [
-  "redisvl",
+  "redisvl>=0.13.0",
   "optuna>=4.3.0,<5.0.0",
   "numpy>=1.26,<3.0.0",
   "pandas>=2.0,<3.0.0",
@@ -53,6 +53,3 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-root = ""
-
-[tool.uv.sources]
-redisvl = { git = "https://github.com/redis/redis-vl-python.git", branch = "feat/RAAE-1236/hybrid-search" }

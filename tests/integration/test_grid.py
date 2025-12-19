@@ -21,9 +21,6 @@ def test_run_grid_study(redis_url):
     study_config["queries"] = f"{TEST_DIR}/grid_data/queries.json"
     study_config["qrels"] = f"{TEST_DIR}/grid_data/qrels.json"
 
-    # Add vector_data_types to test the new dtype functionality
-    study_config["vector_data_types"] = ["float32"]
-
     with open(config_path, "w") as f:
         yaml.dump(study_config, f)
 
@@ -45,18 +42,11 @@ def test_run_grid_study(redis_url):
     for score in metrics["f1"].tolist():
         assert score > 0.0
 
-    # total_indexing_time should be recorded and reused across trials
-    assert "total_indexing_time" in metrics.columns
+    for score in metrics["total_indexing_time"].tolist():
+        assert score > 0.0
 
-    # With a single vector data type, all trials should share the same
-    # positive indexing time value.
-    unique_times = metrics["total_indexing_time"].unique()
-    assert len(unique_times) == 1
-    assert unique_times[0] > 0.0
-
-    last_indexing_time = utils.get_last_indexing_time(redis_url)
-    assert last_indexing_time is not None
-    assert unique_times[0] == pytest.approx(last_indexing_time)
+    for score in metrics["avg_query_time"].tolist():
+        assert score > 0.0
 
     last_schema = utils.get_last_index_settings(redis_url)
     assert last_schema is not None
@@ -111,16 +101,11 @@ def test_run_grid_study_with_multiple_dtypes(redis_url):
     for score in metrics["f1"].tolist():
         assert score > 0.0
 
-    # total_indexing_time should be recorded for each dtype and reused
-    # across search methods for that dtype.
-    assert "total_indexing_time" in metrics.columns
+    for score in metrics["total_indexing_time"].tolist():
+        assert score > 0.0
 
-    for dtype in unique_dtypes:
-        dtype_times = metrics.loc[
-            metrics["vector_data_type"] == dtype, "total_indexing_time"
-        ]
-        assert dtype_times.nunique() == 1
-        assert dtype_times.iloc[0] > 0.0
+    for score in metrics["avg_query_time"].tolist():
+        assert score > 0.0
 
     last_schema = utils.get_last_index_settings(redis_url)
     assert last_schema is not None

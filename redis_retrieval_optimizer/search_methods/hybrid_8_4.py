@@ -1,11 +1,12 @@
+import logging
+
 from ranx import Run
 from redisvl.query.hybrid import HybridQuery
 
 from redis_retrieval_optimizer.schema import SearchMethodInput, SearchMethodOutput
-from redis_retrieval_optimizer.search_methods.base import (
-    run_search_w_time,
-    run_search_w_time_hybrid,
-)
+from redis_retrieval_optimizer.search_methods.base import run_search_w_time
+
+logger = logging.getLogger(__name__)
 
 
 def hybrid_scores_dict(res, id_field_name: str) -> dict:
@@ -46,14 +47,16 @@ def gather_hybrid_8_4_results(
                 yield_combined_score_as="hybrid_score",
             )
 
-            res = run_search_w_time_hybrid(
+            res = run_search_w_time(
                 search_method_input.index,
                 hybrid_query,
                 search_method_input.query_metrics,
             )
             score_dict = hybrid_scores_dict(res, search_method_input.id_field_name)
         except Exception as e:
-            print(f"failed for {key}, {text_query}")
+            logger.exception(
+                f"Hybrid 8_4 search failed for {key=}, {text_query=} \n {e=}"
+            )
             score_dict = {"no_match": 0}
         redis_res_hybrid[key] = score_dict
 
