@@ -37,11 +37,14 @@ def persist_search_metrics(metrics, redis_url, study_id):
 
 
 def run_search_study(
-    config_path: str,
     redis_url: str,
+    config_path: str | None = None,
+    config: dict | None = None,
     search_method_map=SEARCH_METHOD_MAP,
 ):
-    search_study_config = utils.load_search_study_config(config_path)
+    search_study_config = utils.load_search_study_config(
+        config_path=config_path, config=config
+    )
 
     # load queries and qrels
     queries = utils.load_json(search_study_config.queries)

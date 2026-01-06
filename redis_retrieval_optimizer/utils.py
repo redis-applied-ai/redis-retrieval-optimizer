@@ -2,6 +2,7 @@ import json
 import os
 
 import yaml
+from pydantic import ValidationError
 from ranx import Qrels, Run, evaluate
 from redis import Redis
 from redis.commands.json.path import Path
@@ -142,25 +143,68 @@ def get_embedding_model(
     )
 
 
-def load_bayes_study_config(config_path: str) -> BayesStudyConfig:
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
+def _format_validation_error(e: ValidationError, config_type: str) -> str:
+    """Format a Pydantic ValidationError into a user-friendly message."""
+    errors = e.errors()
+    error_messages = []
+    for error in errors:
+        loc = " -> ".join(str(x) for x in error["loc"])
+        msg = error["msg"]
+        error_messages.append(f"  - {loc}: {msg}")
 
-    return BayesStudyConfig(**config)
+    return (
+        f"Invalid {config_type} configuration:\n"
+        + "\n".join(error_messages)
+        + "\n\nPlease check your config dict or YAML file for the above issues."
+    )
 
 
-def load_grid_study_config(config_path: str) -> GridStudyConfig:
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
+def load_bayes_study_config(
+    config_path: str | None = None, config: dict | None = None
+) -> BayesStudyConfig:
+    if config_path is None and config is None:
+        raise ValueError("Either config_path or config must be provided")
 
-    return GridStudyConfig(**config)
+    if config is None:
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+    try:
+        return BayesStudyConfig(**config)
+    except ValidationError as e:
+        raise ValueError(_format_validation_error(e, "BayesStudyConfig")) from e
 
 
-def load_search_study_config(config_path: str) -> SearchStudyConfig:
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
+def load_grid_study_config(
+    config_path: str | None = None, config: dict | None = None
+) -> GridStudyConfig:
+    if config_path is None and config is None:
+        raise ValueError("Either config_path or config must be provided")
 
-    return SearchStudyConfig(**config)
+    if config is None:
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+    try:
+        return GridStudyConfig(**config)
+    except ValidationError as e:
+        raise ValueError(_format_validation_error(e, "GridStudyConfig")) from e
+
+
+def load_search_study_config(
+    config_path: str | None = None, config: dict | None = None
+) -> SearchStudyConfig:
+    if config_path is None and config is None:
+        raise ValueError("Either config_path or config must be provided")
+
+    if config is None:
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+
+    try:
+        return SearchStudyConfig(**config)
+    except ValidationError as e:
+        raise ValueError(_format_validation_error(e, "SearchStudyConfig")) from e
 
 
 def load_json(file_path: str) -> dict:
