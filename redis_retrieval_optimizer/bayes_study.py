@@ -122,7 +122,6 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
         dtype=trial_settings.index_settings.vector_data_type,
     )
 
-
     if recreate_data:
         logging.info("Recreating index...")
         corpus = utils.load_json(study_config.corpus)
@@ -142,7 +141,9 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
         if float(trial_index.info()["percent_indexed"]) < 1:
             while float(trial_index.info()["percent_indexed"]) < 1:
                 time.sleep(1)
-                logging.info(f"Indexing progress: {trial_index.info()['percent_indexed']}")
+                logging.info(
+                    f"Indexing progress: {trial_index.info()['percent_indexed']}"
+                )
 
     if recreate_data:
         assert indexing_start_time is not None
@@ -208,13 +209,14 @@ def objective(trial, study_config, redis_url, corpus_processor, search_method_ma
 
 
 def run_bayes_study(
-    config_path: str,
     redis_url: str,
     corpus_processor: Callable,
+    config_path: str | None = None,
+    config: dict | None = None,
     search_method_map=SEARCH_METHOD_MAP,
 ):
 
-    study_config = utils.load_bayes_study_config(config_path)
+    study_config = utils.load_bayes_study_config(config_path=config_path, config=config)
 
     study = optuna.create_study(
         study_name="test",

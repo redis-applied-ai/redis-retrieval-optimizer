@@ -131,12 +131,15 @@ def init_index_from_grid_settings(
 
 
 def run_grid_study(
-    config_path: str,
     redis_url: str,
     corpus_processor: Callable,
+    config_path: str | None = None,
+    config: dict | None = None,
     search_method_map=SEARCH_METHOD_MAP,
 ):
-    grid_study_config = utils.load_grid_study_config(config_path)
+    grid_study_config = utils.load_grid_study_config(
+        config_path=config_path, config=config
+    )
 
     # load queries and qrels
     queries = utils.load_json(grid_study_config.queries)
