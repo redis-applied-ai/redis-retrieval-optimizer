@@ -67,16 +67,18 @@ def init_index_from_grid_settings(
         embed_settings.dtype = dtype
 
     if grid_study_config.index_settings.from_existing:
-        print(f"Connecting to existing index: {grid_study_config.index_settings.name}")
+        logger.info(
+            f"Connecting to existing index: {grid_study_config.index_settings.name}"
+        )
 
         index = SearchIndex.from_existing(
             name=grid_study_config.index_settings.name,
             redis_url=redis_url,
         )
-        print(
+        logger.info(
             f"Connected to index: {index.name} with {index.info()['num_docs']} objects"
         )
-        print(
+        logger.info(
             f"From existing, assuming {grid_study_config.embedding_models[0].model} embedding model"
         )
         if (
@@ -119,7 +121,7 @@ def init_index_from_grid_settings(
 
             while float(index.info()["percent_indexed"]) < 1:
                 time.sleep(1)
-                logging.info(f"Indexing progress: {index.info()['percent_indexed']}")
+                logger.info(f"Indexing progress: {index.info()['percent_indexed']}")
 
             total_indexing_time = time.time() - indexing_start_time
             utils.set_last_indexing_time(redis_url, total_indexing_time)
@@ -202,9 +204,7 @@ def run_grid_study(
 
                 while float(index.info()["percent_indexed"]) < 1:
                     time.sleep(1)
-                    logging.info(
-                        f"Indexing progress: {index.info()['percent_indexed']}"
-                    )
+                    logger.info(f"Indexing progress: {index.info()['percent_indexed']}")
 
                 total_indexing_time = time.time() - indexing_start_time
                 utils.set_last_indexing_time(redis_url, total_indexing_time)

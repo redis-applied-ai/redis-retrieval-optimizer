@@ -22,6 +22,9 @@ dependencies = [
   "ulid>=1.1",
 ]
 
+[project.optional-dependencies]
+openai = ["openai>=1.13.0"]
+
 [project.scripts]
 format = "scripts:format"
 check-format = "scripts:check_format"
