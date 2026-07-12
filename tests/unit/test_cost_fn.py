@@ -1,6 +1,17 @@
 import pytest
 
-from redis_retrieval_optimizer.bayes_study import cost_fn, norm_metric
+from redis_retrieval_optimizer.bayes_study import (
+    cost_fn,
+    new_metrics,
+    norm_metric,
+    update_metric_row,
+)
+from redis_retrieval_optimizer.schema import (
+    DataSettings,
+    EmbeddingModel,
+    IndexSettings,
+    TrialSettings,
+)
 
 
 class TestCostFunction:
@@ -155,3 +166,39 @@ class TestCostFunction:
         expected_total = expected_avg_query_contribution + expected_recall_contribution
 
         assert result == pytest.approx(expected_total, rel=1e-10)
+
+
+class TestMetricsIsolation:
+    """#3 — metrics accumulator is per-run, not a shared module global."""
+
+    def _trial_settings(self):
+        return TrialSettings(
+            index_settings=IndexSettings(vector_dim=384),
+            embedding=EmbeddingModel(type="hf", model="some/model", dim=384),
+            data=DataSettings(corpus="c.json", queries="q.json", qrels="r.json"),
+        )
+
+    def _trial_metrics(self):
+        return {
+            "recall": 0.5,
+            "ndcg": 0.5,
+            "precision": 0.5,
+            "f1": 0.5,
+            "total_indexing_time": 1.0,
+            "avg_query_time": 0.01,
+            "objective_value": 0.5,
+            "total_memory_mb": 10.0,
+        }
+
+    def test_new_metrics_returns_independent_dicts(self):
+        m1, m2 = new_metrics(), new_metrics()
+        m1["recall"].append(0.9)
+        assert m2["recall"] == []
+
+    def test_update_only_touches_the_passed_dict(self):
+        m1, m2 = new_metrics(), new_metrics()
+        update_metric_row(m1, self._trial_settings(), self._trial_metrics())
+
+        assert len(m1["recall"]) == 1
+        # a second run's accumulator stays empty (no leakage through a global)
+        assert len(m2["recall"]) == 0

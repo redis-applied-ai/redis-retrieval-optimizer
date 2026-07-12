@@ -7,6 +7,11 @@ from redisvl.index import SearchIndex
 from redisvl.utils.vectorize.base import BaseVectorizer
 
 
+def _new_uuid() -> str:
+    """Fresh id per instance (default_factory), not a single value shared across instances."""
+    return str(uuid4())
+
+
 class QueryMetrics(BaseModel):
     """
     Tracks query execution performance metrics.
@@ -188,6 +193,10 @@ class EmbeddingModel(BaseModel):
 
 
 class MetricWeights(BaseModel):
+    # Reject unknown keys so typos (e.g. `f1_at_k`) fail loudly instead of being
+    # silently dropped and leaving every weight at 0.
+    model_config = {"extra": "forbid"}
+
     f1: float = 0
     recall: float = 0
     ndcg: float = 0
@@ -195,9 +204,27 @@ class MetricWeights(BaseModel):
     total_indexing_time: float = 0
     avg_query_time: float = 0
 
+    @model_validator(mode="after")
+    def _require_nonzero_weight(self):
+        if not any(
+            (
+                self.f1,
+                self.recall,
+                self.ndcg,
+                self.precision,
+                self.total_indexing_time,
+                self.avg_query_time,
+            )
+        ):
+            raise ValueError(
+                "at least one metric weight must be non-zero; an all-zero "
+                "objective makes the study a no-op"
+            )
+        return self
+
 
 class TrialSettings(BaseModel):
-    trial_id: str = str(uuid4())
+    trial_id: str = Field(default_factory=_new_uuid)
     index_settings: IndexSettings
     embedding: EmbeddingModel
     data: DataSettings
@@ -211,7 +238,7 @@ class OptimizationSettings(BaseModel):
     distance_metrics: list[str]
     n_trials: int
     n_jobs: int
-    metric_weights: MetricWeights = MetricWeights()
+    metric_weights: MetricWeights
     ret_k: tuple[int, int] = [1, 10]  # type: ignore # pydantic vs mypy
     ef_runtime: list = [10, 50]
     ef_construction: list = [100, 300]
@@ -219,7 +246,7 @@ class OptimizationSettings(BaseModel):
 
 
 class BayesStudyConfig(BaseModel):
-    study_id: str = str(uuid4())
+    study_id: str = Field(default_factory=_new_uuid)
     corpus: str
     qrels: str
     queries: str
@@ -230,7 +257,7 @@ class BayesStudyConfig(BaseModel):
 
 
 class GridStudyConfig(BaseModel):
-    study_id: str = str(uuid4())
+    study_id: str = Field(default_factory=_new_uuid)
     # index settings
     index_settings: IndexSettings
 
@@ -246,7 +273,7 @@ class GridStudyConfig(BaseModel):
 
 
 class SearchStudyConfig(BaseModel):
-    study_id: str = str(uuid4())
+    study_id: str = Field(default_factory=_new_uuid)
     index_name: str
 
     qrels: str
@@ -301,6 +328,13 @@ def get_trial_settings(trial, study_config):
         study_config.index_settings.ef_construction = ef_construction
         study_config.index_settings.ef_runtime = ef_runtime
         study_config.index_settings.m = m
+    else:
+        # index_settings is shared/mutated across trials; reset HNSW params to the
+        # IndexSettings defaults so a flat trial can't inherit a prior hnsw trial's
+        # ef_construction/ef_runtime/m.
+        study_config.index_settings.ef_construction = 0
+        study_config.index_settings.ef_runtime = 0
+        study_config.index_settings.m = 0
 
     embedding_settings = EmbeddingModel(
         model=model_info["model"],

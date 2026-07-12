@@ -140,6 +140,7 @@ class TestLoadBayesStudyConfig:
                 "n_trials": 5,
                 "ret_k": [1, 10],
                 "vector_data_types": ["float32"],
+                "metric_weights": {"f1": 1, "recall": 1},
             },
             "qrels": "/path/to/qrels.json",
             "queries": "/path/to/queries.json",
