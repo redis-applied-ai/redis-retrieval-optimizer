@@ -19,11 +19,19 @@ def rerank(
     num_results: int = 20,
     text_field_name: str = "text",
     id_field_name: str = "_id",
+    vector_field_name: str = "vector",
 ) -> List[Dict[str, Any]]:
     """Rerank the candidates based on the user query with an external model/module."""
 
     # Create the vector query default larger set that is pruned down to ret_k
-    vector_query = vector_query_filter(emb_model, user_query, num_results=20)
+    vector_query = vector_query_filter(
+        emb_model,
+        user_query,
+        num_results=20,
+        vector_field_name=vector_field_name,
+        id_field_name=id_field_name,
+        text_field_name=text_field_name,
+    )
 
     # Create the full-text query default larger set that is pruned down to ret_k
     full_text_query = bm25_query_optional(
@@ -83,6 +91,7 @@ def gather_rerank_results(search_method_input: SearchMethodInput):
                 num_results=search_method_input.ret_k,
                 text_field_name=search_method_input.text_field_name,
                 id_field_name=search_method_input.id_field_name,
+                vector_field_name=search_method_input.vector_field_name,
             )
             scores_dict = make_score_dict_rerank(rerank_res)
         except Exception as e:

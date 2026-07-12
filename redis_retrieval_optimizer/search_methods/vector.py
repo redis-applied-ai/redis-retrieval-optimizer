@@ -36,7 +36,8 @@ def make_score_dict_vec(res, id_field_name: str) -> dict:
         return {"no_match": 0}
     for rec in res:
         if id_field_name in rec:
-            scores_dict[rec[id_field_name]] = 2 - float(rec["vector_distance"]) / 2
+            # cosine distance in [0, 2] -> similarity in [0, 1]
+            scores_dict[rec[id_field_name]] = (2 - float(rec["vector_distance"])) / 2
         else:
             scores_dict["no_match"] = 0
 

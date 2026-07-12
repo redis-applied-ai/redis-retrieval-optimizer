@@ -33,11 +33,14 @@ class SearchMethodInput(BaseModel):
     queries against a Redis index, including the queries, index configuration,
     and search parameters.
 
-    Query Format Options:
-    - Dictionary format: {query_id: {"query": "text", "query_metadata": {...}}}
+    Query Format Options (all normalized to {query_id: "text"} on init):
+    - Flat dict: {query_id: "text"}
+      Example: {"q1": "car search"}
+    - Nested dict: {query_id: {"query": "text", "query_metadata": {...}}}
       Example: {"q1": {"query": "car search", "query_metadata": {"make": "Toyota"}}}
-    - List format: ["query1", "query2", "query3"]
-      Example: ["car search", "truck search", "bike search"]
+      NOTE: query_metadata is not yet used for filtering; it is ignored.
+    - List: ["query1", "query2", ...]  -> keyed by positional index "0", "1", ...
+      (positional ids won't line up with qrels, so use a dict for evaluation)
     """
 
     model_config = {"arbitrary_types_allowed": True}
@@ -81,6 +84,23 @@ class SearchMethodInput(BaseModel):
         if v is not None and not isinstance(v, SearchIndex):
             raise ValueError("Must be a SearchIndex instance")
         return v
+
+    @field_validator("raw_queries")
+    @classmethod
+    def normalize_raw_queries(cls, v):
+        """Coerce the accepted input shapes into a flat {query_id: text} dict.
+
+        Search methods consume ``raw_queries[key]`` as a query string; without
+        this every method broke on the nested-dict and list forms the docstring
+        advertises. query_metadata (nested form) is dropped for now since no
+        method wires it into a filter yet.
+        """
+        if isinstance(v, list):
+            return {str(i): q for i, q in enumerate(v)}
+        normalized = {}
+        for key, val in v.items():
+            normalized[key] = val["query"] if isinstance(val, dict) else val
+        return normalized
 
 
 class SearchMethodOutput(BaseModel):
