@@ -224,6 +224,7 @@ def run_grid_study(
                     index=index,
                     raw_queries=queries,
                     emb_model=emb_model,
+                    ret_k=grid_study_config.ret_k,
                     id_field_name=grid_study_config.index_settings.id_field_name,
                     vector_field_name=grid_study_config.index_settings.vector_field_name,
                     text_field_name=grid_study_config.index_settings.text_field_name,
