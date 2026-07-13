@@ -81,14 +81,12 @@ def init_index_from_grid_settings(
         logger.info(
             f"From existing, assuming {grid_study_config.embedding_models[0].model} embedding model"
         )
-        if (
-            embed_settings.dim
-            != index.schema.fields[
-                grid_study_config.index_settings.vector_field_name
-            ].attrs.dims
-        ):
+        index_dim = index.schema.fields[
+            grid_study_config.index_settings.vector_field_name
+        ].attrs.dims
+        if embed_settings.dim != index_dim:
             raise ValueError(
-                f"Embedding model dimension {embed_settings.dim} does not match index dimension {index.schema.fields[grid_study_config.index_settings.vector_field_name].attrs['dims']}"
+                f"Embedding model dimension {embed_settings.dim} does not match index dimension {index_dim}"
             )
         utils.set_last_index_settings(redis_url, index_settings)
     else:
