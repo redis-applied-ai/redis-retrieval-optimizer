@@ -11,15 +11,21 @@ logger = logging.getLogger(__name__)
 
 
 def vector_query_filter(
-    emb_model, user_query: str, num_results: int, filters=None
+    emb_model,
+    user_query: str,
+    num_results: int,
+    filters=None,
+    vector_field_name: str = "vector",
+    id_field_name: str = "_id",
+    text_field_name: str = "text",
 ) -> VectorQuery:
     """Generate a Redis vector query given user query string."""
     vector = emb_model.embed(user_query, as_buffer=True)
     query = VectorQuery(
         vector=vector,
-        vector_field_name="vector",
+        vector_field_name=vector_field_name,
         num_results=num_results,
-        return_fields=["_id", "text"],
+        return_fields=[id_field_name, text_field_name],
     )
     if filters:
         query.set_filter(filters)

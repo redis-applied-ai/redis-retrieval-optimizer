@@ -182,9 +182,9 @@ def test_make_score_dict_vec():
     # Verify scores are calculated correctly
     assert "doc1" in scores
     assert "doc2" in scores
-    # Score should be 2 - distance/2
-    assert scores["doc1"] == 2 - 0.2 / 2
-    assert scores["doc2"] == 2 - 0.5 / 2
+    # cosine distance in [0, 2] -> similarity in [0, 1]
+    assert scores["doc1"] == (2 - 0.2) / 2
+    assert scores["doc2"] == (2 - 0.5) / 2
 
     # Test with empty results
     empty_scores = make_score_dict_vec([], "_id")
@@ -380,6 +380,103 @@ def test_gather_hybrid_8_4_results(vector_index, test_data):
     f1 = evaluate(qrels, result.run, metrics=["f1"])
 
     assert f1 > 0
+
+
+@pytest.fixture
+def custom_field_index(redis_url, test_data):
+    """Index using non-default field names (doc_id/body/embedding)."""
+    corpus, _, _ = test_data
+    emb_model = HFTextVectorizer(model="sentence-transformers/all-MiniLM-L6-v2")
+
+    schema = {
+        "index": {"name": "test-custom", "prefix": "test-custom"},
+        "fields": [
+            {"name": "doc_id", "type": "tag"},
+            {"name": "body", "type": "text"},
+            {
+                "name": "embedding",
+                "type": "vector",
+                "attrs": {
+                    "dims": 384,
+                    "distance_metric": "cosine",
+                    "algorithm": "flat",
+                    "datatype": "float32",
+                },
+            },
+        ],
+    }
+
+    index = SearchIndex.from_dict(schema, redis_url=redis_url)
+    try:
+        index.delete(drop=True)
+    except Exception:
+        pass
+    index.create()
+
+    docs = [
+        {
+            "doc_id": doc_id,
+            "body": doc["text"],
+            "embedding": emb_model.embed(doc["text"], as_buffer=True),
+        }
+        for doc_id, doc in corpus.items()
+    ]
+    index.load(docs)
+
+    yield index, emb_model
+
+    index.delete(drop=True)
+
+
+def test_weighted_rrf_honors_custom_field_names(custom_field_index, test_data):
+    """#4 — weighted_rrf must query the configured fields, not hardcoded ones.
+
+    On the pre-fix code the vector/bm25 queries hit "vector"/"text"/"_id",
+    which don't exist here, so every query errors out to {"no_match": 0} and
+    f1 is 0.
+    """
+    from redis_retrieval_optimizer.search_methods.weighted_rrf import (
+        gather_weighted_rrf,
+    )
+
+    index, emb_model = custom_field_index
+    _, queries, qrels = test_data
+
+    search_input = SearchMethodInput(
+        index=index,
+        raw_queries=queries,
+        emb_model=emb_model,
+        id_field_name="doc_id",
+        text_field_name="body",
+        vector_field_name="embedding",
+    )
+
+    result = gather_weighted_rrf(search_input)
+
+    assert isinstance(result.run, Run)
+    assert evaluate(qrels, result.run, metrics=["f1"]) > 0
+
+
+def test_rerank_honors_custom_field_names(custom_field_index, test_data):
+    """#4 — rerank's vector candidate query must use the configured fields."""
+    from redis_retrieval_optimizer.search_methods.rerank import gather_rerank_results
+
+    index, emb_model = custom_field_index
+    _, queries, qrels = test_data
+
+    search_input = SearchMethodInput(
+        index=index,
+        raw_queries=queries,
+        emb_model=emb_model,
+        id_field_name="doc_id",
+        text_field_name="body",
+        vector_field_name="embedding",
+    )
+
+    result = gather_rerank_results(search_input)
+
+    assert isinstance(result.run, Run)
+    assert evaluate(qrels, result.run, metrics=["f1"]) > 0
 
 
 def test_gather_rrf_8_4_results(vector_index, test_data):

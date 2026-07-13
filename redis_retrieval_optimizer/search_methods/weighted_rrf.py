@@ -43,15 +43,24 @@ def weighted_rrf(
     num_results: int = 4,
     k: int = 20,
     id_field_name: str = "_id",
+    text_field_name: str = "text",
+    vector_field_name: str = "vector",
 ) -> List[Dict[str, Any]]:
     """Implemented client-side RRF after querying from Redis."""
 
     # Create the vector query
-    vector_query = vector_query_filter(emb_model, user_query, num_results=k)
+    vector_query = vector_query_filter(
+        emb_model,
+        user_query,
+        num_results=k,
+        vector_field_name=vector_field_name,
+        id_field_name=id_field_name,
+        text_field_name=text_field_name,
+    )
 
     # Create the full-text bm25 query
     full_text_query = bm25_query_optional(
-        "text", id_field_name, user_query, num_results=k
+        text_field_name, id_field_name, user_query, num_results=k
     )
 
     # Run queries individually
@@ -86,6 +95,8 @@ def gather_weighted_rrf(search_method_input: SearchMethodInput) -> SearchMethodO
                 num_results=search_method_input.ret_k,
                 k=20,  # TODO make this configurable
                 id_field_name=search_method_input.id_field_name,
+                text_field_name=search_method_input.text_field_name,
+                vector_field_name=search_method_input.vector_field_name,
             )
             scores_dict = make_score_dict_w_rff(w_rff)
         except Exception as e:
