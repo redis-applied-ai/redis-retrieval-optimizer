@@ -65,7 +65,8 @@ def estimate_index_size(
         else False
     )
     sample_vec = emb_model.embed("test embedding", as_buffer=as_buffer)
-    sample_object[vector_field_name] = sample_vec
+    # copy so we don't mutate the caller's dict by adding the vector field
+    sample_object = {**sample_object, vector_field_name: sample_vec}
 
     sample_objects = [sample_object] * num_objects
 
@@ -88,8 +89,7 @@ def estimate_index_size(
 
     logger.info("Calculating memory usage per key")
     for key in keys:
-        key_memory = index.client.memory_usage(key)
-        memory_usage_keys_bytes += key_memory
+        memory_usage_keys_bytes += index.client.memory_usage(key)
 
     info = index.info()
 
@@ -103,6 +103,9 @@ def estimate_index_size(
     )  # total memory used by all indexes
     object_memory_mb = memory_usage_keys_bytes / (1024**2)
     total_memory_mb = index_memory_mb + (object_memory_mb)
+
+    # average per-key memory; guard against an empty load (num_objects == 0)
+    single_key_memory_mb = object_memory_mb / len(keys) if keys else 0.0
 
     index_memory_gb = index_memory_mb / 1024
     object_memory_gb = object_memory_mb / 1024
@@ -127,5 +130,5 @@ def estimate_index_size(
         "object_memory_gb": object_memory_gb,
         "total_memory_gb": total_memory_gb,
         "info_used_memory_gb": info_used_memory_gb,
-        "single_key_memory_mb": key_memory / (1024**2),
+        "single_key_memory_mb": single_key_memory_mb,
     }
