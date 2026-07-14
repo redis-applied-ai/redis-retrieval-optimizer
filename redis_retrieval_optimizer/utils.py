@@ -60,14 +60,22 @@ def vectorizer_from_dict(
         raise ValueError(f"Unsupported vectorizer type: {vectorizer_type}")
 
 
+# Internal bookkeeping keys. These live under the default "ret-opt" prefix, so
+# they must be excluded from per-object memory accounting (see
+# get_index_memory_stats) to avoid counting them as indexed documents.
+LAST_SCHEMA_KEY = "ret-opt:last_schema"
+LAST_INDEXING_TIME_KEY = "ret-opt:last_indexing_time"
+BOOKKEEPING_KEYS = {LAST_SCHEMA_KEY, LAST_INDEXING_TIME_KEY}
+
+
 def get_last_index_settings(redis_url):
     client = Redis.from_url(redis_url)
-    return client.json().get("ret-opt:last_schema")
+    return client.json().get(LAST_SCHEMA_KEY)
 
 
 def set_last_index_settings(redis_url, index_settings):
     client = Redis.from_url(redis_url)
-    client.json().set("ret-opt:last_schema", Path.root_path(), index_settings)
+    client.json().set(LAST_SCHEMA_KEY, Path.root_path(), index_settings)
 
 
 def get_last_indexing_time(redis_url: str) -> float | None:
@@ -77,7 +85,7 @@ def get_last_indexing_time(redis_url: str) -> float | None:
     indexing time across runs where we do not reload data.
     """
     client = Redis.from_url(redis_url)
-    value = client.json().get("ret-opt:last_indexing_time")
+    value = client.json().get(LAST_INDEXING_TIME_KEY)
     return float(value) if value is not None else None
 
 
@@ -88,30 +96,35 @@ def set_last_indexing_time(redis_url: str, indexing_time: float) -> None:
     and therefore should reuse the previously measured indexing time.
     """
     client = Redis.from_url(redis_url)
-    client.json().set("ret-opt:last_indexing_time", Path.root_path(), indexing_time)
+    client.json().set(LAST_INDEXING_TIME_KEY, Path.root_path(), indexing_time)
 
 
 def check_recreate(index_settings, last_index_settings):
-    embedding_settings = index_settings.pop("embedding") if index_settings else None
+    # Compare everything except "embedding" (handled separately below) without
+    # mutating the caller's dicts -- this used to .pop("embedding") off both
+    # inputs, forcing callers to re-insert the key afterward.
+    def _without_embedding(settings):
+        return (
+            {k: v for k, v in settings.items() if k != "embedding"} if settings else {}
+        )
+
+    embedding_settings = index_settings.get("embedding") if index_settings else None
     last_embedding_settings = (
-        last_index_settings.pop("embedding") if last_index_settings else None
+        last_index_settings.get("embedding") if last_index_settings else None
     )
+
+    current = _without_embedding(index_settings)
+    last = _without_embedding(last_index_settings)
 
     if not last_index_settings:
         recreate_index = True
         recreate_data = True
-    elif index_settings != last_index_settings:
+    elif current != last:
         recreate_index = True
 
         # Check if vector_data_type changed - this requires data recreation
         # because vectors must be re-embedded with the new dtype
-        current_dtype = (
-            index_settings.get("vector_data_type") if index_settings else None
-        )
-        last_dtype = (
-            last_index_settings.get("vector_data_type") if last_index_settings else None
-        )
-        dtype_changed = current_dtype != last_dtype
+        dtype_changed = current.get("vector_data_type") != last.get("vector_data_type")
 
         if embedding_settings != last_embedding_settings or dtype_changed:
             recreate_data = True
@@ -268,11 +281,17 @@ def get_index_memory_stats(index_name: str, prefix: str, redis_url: str):
     index_info = index.info()
     total_index_memory_sz_mb = index_info["total_index_memory_sz_mb"]
 
-    index_keys = index.client.keys(f"{prefix}*")
-
     memory_data_bytes = 0
-    for key in index_keys:
-        memory_data_bytes += index.client.memory_usage(key)
+    # SCAN instead of the blocking KEYS, and skip internal bookkeeping keys
+    # (ret-opt:last_schema / ret-opt:last_indexing_time), which share the default
+    # "ret-opt" prefix and would otherwise be counted as indexed objects.
+    for key in index.client.scan_iter(match=f"{prefix}*", count=1000):
+        key_str = key.decode() if isinstance(key, bytes) else key
+        if key_str in BOOKKEEPING_KEYS:
+            continue
+        usage = index.client.memory_usage(key)
+        if usage:
+            memory_data_bytes += usage
 
     return {
         "total_index_memory_sz_mb": float(total_index_memory_sz_mb),

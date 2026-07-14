@@ -132,3 +132,43 @@ def test_estimate_index_size_computes_expected_memory_stats(monkeypatch):
 
     # Single key memory should be 1 MiB
     assert result["single_key_memory_mb"] == pytest.approx(1.0)
+
+
+def test_estimate_index_size_does_not_mutate_caller_object(monkeypatch):
+    """#7 — the vector field must not leak back into the caller's dict."""
+    monkeypatch.setattr(
+        mem_utils, "vectorizer_from_dict", lambda info: DummyVectorizer()
+    )
+    monkeypatch.setattr(mem_utils, "SearchIndex", FakeSearchIndex)
+
+    sample_object = {"id": "1"}
+    mem_utils.estimate_index_size(
+        sample_object=sample_object,
+        num_objects=2,
+        schema=DummySchema(),
+        embedding_model_info={"model": "dummy"},
+        redis_url="redis://localhost:6379",
+        vector_field_name="vector",
+    )
+
+    assert sample_object == {"id": "1"}  # no "vector" key added
+
+
+def test_estimate_index_size_handles_zero_objects(monkeypatch):
+    """#7 — empty load must not raise NameError on single_key_memory_mb."""
+    monkeypatch.setattr(
+        mem_utils, "vectorizer_from_dict", lambda info: DummyVectorizer()
+    )
+    monkeypatch.setattr(mem_utils, "SearchIndex", FakeSearchIndex)
+
+    result = mem_utils.estimate_index_size(
+        sample_object={"id": "1"},
+        num_objects=0,
+        schema=DummySchema(),
+        embedding_model_info={"model": "dummy"},
+        redis_url="redis://localhost:6379",
+        vector_field_name="vector",
+    )
+
+    assert result["single_key_memory_mb"] == 0.0
+    assert result["object_memory_mb"] == 0.0
