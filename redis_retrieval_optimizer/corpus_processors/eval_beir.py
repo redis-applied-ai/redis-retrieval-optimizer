@@ -15,15 +15,15 @@ def get_beir_dataset(dataset="fiqa"):
     return corpus, queries, qrels
 
 
-def process_corpus(corpus: any, emb_model: BaseVectorizer):
+def process_corpus(corpus: dict, emb_model: BaseVectorizer):
     corpus_data = []
     corpus_texts = []
 
     # this can take a minute
     for key in corpus:
-        corpus_texts.append(
-            corpus[key]["title"] + " " + corpus[key]["text"]
-        )  # note: embedded both text and title
+        # title is optional in BEIR-style corpora; embed title + text
+        title = corpus[key].get("title", "")
+        corpus_texts.append(f"{title} {corpus[key]['text']}".strip())
 
     text_embeddings = emb_model.embed_many(corpus_texts, as_buffer=True)
 
@@ -32,7 +32,7 @@ def process_corpus(corpus: any, emb_model: BaseVectorizer):
             {
                 "_id": key,
                 "text": text,
-                "title": corpus[key]["title"],
+                "title": corpus[key].get("title", ""),
                 "vector": embedding,
             }
         )
