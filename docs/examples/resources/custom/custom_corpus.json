@@ -1,0 +1,122 @@
+{
+    "001": {
+        "product_name": "Nike Air Jordans",
+        "category": "Footwear",
+        "price": 150,
+        "in_stock": true
+    },
+    "002": {
+        "product_name": "Apple MacBook Pro",
+        "category": "Electronics",
+        "price": 2000,
+        "in_stock": false
+    },
+    "003": {
+        "product_name": "Samsung Galaxy S21",
+        "category": "Electronics",
+        "price": 799,
+        "in_stock": true
+    },
+    "004": {
+        "product_name": "Sony WH-1000XM4 Headphones",
+        "category": "Audio",
+        "price": 350,
+        "in_stock": true
+    },
+    "005": {
+        "product_name": "Dell XPS 13 Laptop",
+        "category": "Electronics",
+        "price": 1200,
+        "in_stock": true
+    },
+    "006": {
+        "product_name": "Fitbit Charge 5",
+        "category": "Wearables",
+        "price": 150,
+        "in_stock": true
+    },
+    "007": {
+        "product_name": "Canon EOS R5 Camera",
+        "category": "Photography",
+        "price": 3899,
+        "in_stock": false
+    },
+    "008": {
+        "product_name": "Bose SoundLink Revolve+ Speaker",
+        "category": "Audio",
+        "price": 329,
+        "in_stock": true
+    },
+    "009": {
+        "product_name": "Microsoft Surface Pro 7",
+        "category": "Electronics",
+        "price": 749,
+        "in_stock": true
+    },
+    "010": {
+        "product_name": "GoPro HERO9 Black Camera",
+        "category": "Photography",
+        "price": 399,
+        "in_stock": true
+    },
+    "011": {
+        "product_name": "Brooks air stepper running shoes",
+        "category": "Footwear",
+        "price": 120,
+        "in_stock": true
+    },
+    "012": {
+        "product_name": "LG OLED55CXPUA Alexa Built-In CX 55\" 4K Smart OLED TV",
+        "category": "Electronics",
+        "price": 1499,
+        "in_stock": true
+    },
+    "013": {
+        "product_name": "JBL Flip 5 Waterproof Portable Bluetooth Speaker",
+        "category": "Audio",
+        "price": 99,
+        "in_stock": true
+    },
+    "014": {
+        "product_name": "Asus ROG Zephyrus G14 Gaming Laptop",
+        "category": "Electronics",
+        "price": 1449,
+        "in_stock": true
+    },
+    "015": {
+        "product_name": "Apple iPad Air (4th Generation)",
+        "category": "Tablets",
+        "price": 599,
+        "in_stock": true
+    },
+    "016": {
+        "product_name": "Razer BlackWidow Elite Mechanical Gaming Keyboard",
+        "category": "Accessories",
+        "price": 169,
+        "in_stock": true
+    },
+    "017": {
+        "product_name": "Logitech MX Master 3 Wireless Mouse",
+        "category": "Accessories",
+        "price": 99,
+        "in_stock": true
+    },
+    "018": {
+        "product_name": "Samsung Galaxy Tab S7+ Tablet",
+        "category": "Electronics",
+        "price": 849,
+        "in_stock": true
+    },
+    "019": {
+        "product_name": "Anker PowerCore Portable Charger",
+        "category": "Electronics",
+        "price": 49,
+        "in_stock": true
+    },
+    "020": {
+        "product_name": "Nike Air Jordans (2021 Edition)",
+        "category": "Footwear",
+        "price": 160,
+        "in_stock": false
+    }
+}

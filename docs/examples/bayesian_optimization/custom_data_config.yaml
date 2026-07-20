@@ -1,0 +1,46 @@
+# path to data files for easy read
+corpus: "../resources/custom/custom_corpus.json"
+queries: "../resources/custom/custom_queries.json"
+qrels: "../resources/custom/custom_qrels.json"
+
+index_settings:
+  name: "optimize"
+  vector_field_name: "vector_embedding" # name of the vector field to search on
+  text_field_name: "product_name" # name of the text field for lexical search
+  from_existing: false
+  vector_dim: 384 # should match first embedding model or from_existing
+  additional_fields:
+      - name: "category"
+        type: "tag"
+      - name: "price"
+        type: "numeric"
+      - name: "in_stock"
+        type: "tag"
+
+# section for bayesian optimization
+optimization_settings:
+  # defines weight of each metric in optimization function
+  metric_weights:
+    f1: 1
+    total_indexing_time: 1
+  algorithms: ["hnsw"] # indexing algorithm to be included in the study
+  vector_data_types: ["float32"] # data types to be included in the study
+  distance_metrics: ["cosine"] # distance metrics to be included in the study
+  n_trials: 10 # total number of trials to run
+  n_jobs: 1
+  ret_k: [5, 10] # potential range of value to be sampled during study
+  ef_runtime: [10, 30, 50] # potential values for ef_runtime to take
+  ef_construction: [100,  300] # potential values for ef_construction to take
+  m: [8, 16, 64] # potential values for m to take
+
+# potential values for search method
+##search_methods: ["vector", "hybrid", "bm25", "filter_query"]
+search_methods: ["bm25"] #TODO BUG! any search method passed in to custom_search_method_map is called
+
+# potential values for embedding models
+embedding_models:
+  - type: "hf"
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    dim: 384
+    embedding_cache_name: "vec-cache" # avoid names with including 'ret-opt' as this can cause collisions
+    dtype: "float32"
